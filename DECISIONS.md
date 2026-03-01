@@ -190,3 +190,16 @@ Project task lists use move-up/move-down chevron buttons instead of drag-and-dro
 ## Inline Capture on Intake Page
 
 The Intake page has a persistent "Capture" input at the top, even when the inbox is empty. This provides a quick way to add thoughts directly in the app without going through the iOS Shortcut pipeline. Useful for desktop usage and testing.
+
+## Port Assignments
+
+All ports are configurable via `.env`, but the defaults were chosen intentionally:
+
+| Service  | Host Port | Container Port | Rationale |
+|----------|-----------|----------------|-----------|
+| Postgres | 5433      | 5432           | 5433 on the host avoids collisions with any locally installed Postgres (which defaults to 5432). Container still uses the standard 5432 internally. |
+| API      | 8000      | 8000           | Standard uvicorn default. Not 5000 (Flask convention) or 3000 (conflicts with UI). |
+| UI       | 3000      | 3000           | Standard Vite dev server default. This is the primary user-facing port. |
+| n8n      | 5678      | 5678           | n8n's default. No reason to change it — no common conflicts. |
+
+The UI proxies `/api/*` requests to the API container on port 8000 internally (via Docker networking), so from the browser's perspective everything is on `:3000`. The API is also exposed directly on `:8000` for CLI/curl usage, n8n webhook calls, and the auto-generated Swagger docs at `/docs`.
