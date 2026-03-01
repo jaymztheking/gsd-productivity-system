@@ -88,9 +88,9 @@ export default function EngagePage() {
 
   const handleCreateProject = async (
     name: string,
-    indexNotes?: string
+    description?: string
   ): Promise<Project> => {
-    return createProject(name, indexNotes);
+    return createProject(name, { description });
   };
 
   if (tagsLoading) {

@@ -19,7 +19,7 @@ interface IntakeCardProps {
   ) => void;
   onMakeProject: (
     name: string,
-    indexNotes?: string
+    description?: string
   ) => Promise<Project>;
 }
 
@@ -148,8 +148,8 @@ export default function IntakeCard({
             projects={projects}
             selected={projectId}
             onSelect={setProjectId}
-            onCreateNew={async (name, indexNotes) => {
-              const p = await onMakeProject(name, indexNotes);
+            onCreateNew={async (name, description) => {
+              const p = await onMakeProject(name, description);
               return p;
             }}
           />
@@ -185,7 +185,7 @@ export default function IntakeCard({
             className="textarea"
             value={projectNotes}
             onChange={(e) => setProjectNotes(e.target.value)}
-            placeholder="Index notes — phases, checklist, context..."
+            placeholder="Description — what is this project about?"
             rows={4}
           />
           <div className="intake-actions">

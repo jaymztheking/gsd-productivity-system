@@ -35,5 +35,7 @@ class NextActionOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     completed_at: datetime | None
+    deleted_at: datetime | None
+    project_sort_order: int
 
     model_config = {"from_attributes": True}

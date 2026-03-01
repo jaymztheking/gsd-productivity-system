@@ -16,7 +16,7 @@ async def list_next_actions(
     status: ActionStatus | None = None,
     tag_ids: list[UUID] | None = None,
 ) -> list[NextAction]:
-    stmt = select(NextAction)
+    stmt = select(NextAction).where(NextAction.deleted_at.is_(None))
 
     if status is not None:
         stmt = stmt.where(NextAction.status == status)
@@ -120,7 +120,8 @@ async def update_next_action(
 async def delete_next_action(
     session: AsyncSession, action: NextAction
 ) -> None:
-    await session.delete(action)
+    """Soft delete — sets deleted_at instead of removing the row."""
+    action.deleted_at = datetime.utcnow()
     await session.commit()
 
 

@@ -1,19 +1,19 @@
 # GSD (Getting Shit Done)
 
-Personal GTD-inspired productivity system. Capture tasks from anywhere, triage them in an inbox, then filter by your current context to find what to do right now.
+Personal GTD-inspired productivity system. Capture tasks from anywhere (Siri, Apple Watch, CarPlay, or directly in the app), triage them in an inbox, then filter by your current context to find what to do right now.
 
 ## Architecture
 
 ```
-iOS Reminders ──> n8n webhook ──> API ──> Postgres
-                                  ↑
-                              UI (React)
-                         /intake    /engage
+Siri / Apple Watch ──> iOS Shortcut ──> n8n webhook ──> API ──> Postgres
+                                                         ↑
+                                                     UI (React)
+                                              /engage  /intake  /projects
 ```
 
 - **Postgres 15** — single source of truth
-- **FastAPI** — async REST API, all CRUD + tag-based AND-filtering
-- **React + Vite** — single app serving Intake (triage) and Engage (filter + do) routes
+- **FastAPI** — async REST API, full CRUD + tag-based AND-filtering
+- **React + Vite** — single app serving Engage (filter + do), Intake (triage), and Projects (manage) routes
 - **n8n** — capture webhook + weekly review digest
 
 ## Quick Start (Local Dev)
@@ -29,6 +29,7 @@ curl http://localhost:8000/health        # API
 curl http://localhost:8000/tags          # Seed tags
 open http://localhost:3000               # UI (redirects to /engage)
 open http://localhost:3000/intake        # Intake UI
+open http://localhost:3000/projects      # Projects UI
 open http://localhost:5678               # n8n (admin/admin)
 ```
 
@@ -76,22 +77,31 @@ The same container images run on k3s. Create Kubernetes manifests (Deployment + 
 - Use a PersistentVolumeClaim for Postgres data (or point at managed cloud Postgres)
 - Expose the UI via an Ingress or NodePort
 
-## iOS Shortcut Setup
+## iOS Shortcut Setup (Voice Capture)
 
-1. Open the Shortcuts app on your iPhone
-2. Create a new Shortcut triggered by "When I add a Reminder to [GSD Inbox] list"
-3. Add action: "Get Contents of URL"
-   - URL: `http://<your-n8n-host>:5678/webhook/capture`
-   - Method: POST
-   - Request Body: JSON — `{ "title": "Shortcut Input" }` (use the Reminder title variable)
-4. Now Siri, CarPlay, and manual Reminders entries all feed into GSD
+The capture pipeline uses iOS Shortcuts to send voice input directly to the n8n webhook:
 
-Alternatively, send captures directly to the API:
+1. Open the **Shortcuts** app on your iPhone
+2. Create a new Shortcut named **"Capture"** (short name works best for Siri, Watch, and CarPlay)
+3. **Action 1:** "Dictate Text" — captures your speech
+4. **Action 2:** "Get Contents of URL"
+   - URL: `http://<your-server-ip>:5678/webhook/capture`
+   - Method: **POST**
+   - Headers: `Content-Type: application/json`
+   - Request Body (JSON): key `title`, value = the "Dictated Text" variable from Action 1
+
+Now say **"Hey Siri, Capture"** from iPhone, Apple Watch, or CarPlay to send tasks straight to your inbox.
+
+**Tip:** Keep the shortcut name to a single word ("Capture") for reliable Siri/Watch/CarPlay recognition. Multi-word names can be unreliable on watchOS.
+
+You can also capture directly via the API:
 ```bash
 curl -X POST http://localhost:8000/next-actions \
   -H "Content-Type: application/json" \
   -d '{"title": "Your task here"}'
 ```
+
+Or use the **+ Capture** button at the top of the Intake page in the UI.
 
 ## n8n Workflows
 
@@ -105,15 +115,27 @@ To import: n8n UI → Workflows → Import from File.
 ## API Endpoints
 
 ```
-GET    /tags                    — all tags (seed data, 13 tags)
-GET    /projects                — list projects
-POST   /projects                — create project
-PATCH  /projects/:id            — update project
+GET    /tags                                 — all tags (ordered by sort_order)
 
-GET    /next-actions            — list (filter: ?status=active&tag_ids=uuid1&tag_ids=uuid2)
-POST   /next-actions            — create
-PATCH  /next-actions/:id        — update
-DELETE /next-actions/:id        — delete
+GET    /projects                             — list projects (?root_only=true)
+GET    /projects/:id                         — project detail (with links, children)
+POST   /projects                             — create project
+PATCH  /projects/:id                         — update project
+DELETE /projects/:id                         — delete (re-parents children, unassigns tasks)
+
+GET    /projects/:id/tasks                   — ordered active tasks
+GET    /projects/:id/history                 — completed + deleted task history
+PUT    /projects/:id/tasks/order             — reorder tasks
+
+POST   /projects/:id/links                   — add link
+PATCH  /projects/:id/links/:link_id          — update link
+DELETE /projects/:id/links/:link_id          — remove link
+PUT    /projects/:id/links/order             — reorder links
+
+GET    /next-actions                         — list (filter: ?status=active&tag_ids=uuid1&tag_ids=uuid2)
+POST   /next-actions                         — create
+PATCH  /next-actions/:id                     — update
+DELETE /next-actions/:id                     — soft delete (sets deleted_at)
 ```
 
 Tag filtering uses AND logic: `?tag_ids=a&tag_ids=b` returns only actions tagged with **both** a and b.
@@ -122,14 +144,17 @@ Auto-generated API docs: `http://localhost:8000/docs`
 
 ## Tag Taxonomy
 
-| Category | Tags |
+| Category | Tags (ordered) |
 |----------|------|
 | Context  | @home, @online, @errands, @calls |
 | Time     | #now, #today, #week, #month, #someday |
 | Energy   | +easy, +routine, +focused, +peak |
 
+Tags within time and energy categories are ordered by intensity (ordinal data). Context tags are alphabetical.
+
 ## Data Model
 
-- **next_actions** — the atomic unit. Status: inbox → active/pending → complete
-- **tags** — first-class entities (not text parsing). Joined via `next_action_tags`
-- **projects** — container for related actions. Status: active → complete
+- **next_actions** — the atomic unit. Status: inbox → active/pending → complete. Soft-deleted (preserves history).
+- **tags** — first-class entities with sort_order. Joined via `next_action_tags`. AND-filter logic.
+- **projects** — container for related actions. Supports 2-level hierarchy (parent → sub-projects). Status: active → complete.
+- **project_links** — URL + label pairs attached to projects (JIRA-style references).

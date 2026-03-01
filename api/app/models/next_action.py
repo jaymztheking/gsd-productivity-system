@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, Enum, ForeignKey, String, Table, Text, func
+from sqlalchemy import Column, Enum, ForeignKey, Integer, String, Table, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -47,6 +47,10 @@ class NextAction(Base):
         nullable=False, server_default=func.now(), onupdate=func.now()
     )
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    project_sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
 
     # Relationships
     tags = relationship("Tag", secondary=next_action_tags, lazy="selectin")
