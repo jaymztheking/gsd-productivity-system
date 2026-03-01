@@ -1,0 +1,133 @@
+{
+  "name": "GSD Weekly Review Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtDay": 7,
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Weekly Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://api:8000/next-actions?status=inbox",
+        "options": {}
+      },
+      "id": "fetch-inbox",
+      "name": "Fetch Inbox Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 160]
+    },
+    {
+      "parameters": {
+        "url": "http://api:8000/next-actions?status=active",
+        "options": {}
+      },
+      "id": "fetch-active",
+      "name": "Fetch Active Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://api:8000/next-actions?status=pending",
+        "options": {}
+      },
+      "id": "fetch-pending",
+      "name": "Fetch Pending Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 440]
+    },
+    {
+      "parameters": {
+        "url": "http://api:8000/projects?status=active",
+        "options": {}
+      },
+      "id": "fetch-projects",
+      "name": "Fetch Active Projects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 580]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all inputs\nconst inbox = $input.all().length > 0 ? $('Fetch Inbox Items').all().map(i => i.json) : [];\nconst active = $('Fetch Active Items').all().map(i => i.json);\nconst pending = $('Fetch Pending Items').all().map(i => i.json);\nconst projects = $('Fetch Active Projects').all().map(i => i.json);\n\n// Identify someday items (tagged #someday)\nconst somedayItems = active.filter(a => \n  Array.isArray(a.tags) && a.tags.some(t => t.name === '#someday')\n);\n\n// Identify stale items (active, not updated in 7+ days)\nconst now = new Date();\nconst weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);\nconst staleItems = active.filter(a => new Date(a.updated_at) < weekAgo);\n\n// Build digest HTML\nlet html = '<h2>GSD Weekly Review</h2>';\nhtml += `<p>Generated: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>`;\n\n// Inbox\nhtml += `<h3>Inbox (${inbox.length} unprocessed)</h3>`;\nif (inbox.length > 0) {\n  html += '<ul>';\n  inbox.forEach(i => { html += `<li>${i.title}</li>`; });\n  html += '</ul>';\n  html += '<p><strong>Action:</strong> Process these in the Intake UI.</p>';\n} else {\n  html += '<p>Inbox zero!</p>';\n}\n\n// Stale Actions\nhtml += `<h3>Stale Actions (${staleItems.length})</h3>`;\nif (staleItems.length > 0) {\n  html += '<ul>';\n  staleItems.forEach(i => {\n    const tags = Array.isArray(i.tags) ? i.tags.map(t => t.name).join(', ') : '';\n    html += `<li>${i.title} [${tags}]</li>`;\n  });\n  html += '</ul>';\n  html += '<p><strong>Action:</strong> Are these still relevant? Update or complete them.</p>';\n} else {\n  html += '<p>All active items are fresh.</p>';\n}\n\n// Pending / Waiting\nhtml += `<h3>Pending / Waiting For (${pending.length})</h3>`;\nif (pending.length > 0) {\n  html += '<ul>';\n  pending.forEach(i => { html += `<li>${i.title}</li>`; });\n  html += '</ul>';\n  html += '<p><strong>Action:</strong> Follow up on these.</p>';\n} else {\n  html += '<p>Nothing pending.</p>';\n}\n\n// Someday/Maybe\nhtml += `<h3>Someday/Maybe (${somedayItems.length})</h3>`;\nif (somedayItems.length > 0) {\n  html += '<ul>';\n  somedayItems.forEach(i => { html += `<li>${i.title}</li>`; });\n  html += '</ul>';\n  html += '<p><strong>Action:</strong> Scan this list. Promote or delete.</p>';\n} else {\n  html += '<p>No someday items.</p>';\n}\n\n// Projects\nhtml += `<h3>Active Projects (${projects.length})</h3>`;\nif (projects.length > 0) {\n  html += '<ul>';\n  projects.forEach(p => {\n    const hasActions = active.some(a => a.project_id === p.id);\n    const flag = hasActions ? '' : ' <strong>[NO NEXT ACTION]</strong>';\n    html += `<li>${p.name}${flag}</li>`;\n  });\n  html += '</ul>';\n} else {\n  html += '<p>No active projects.</p>';\n}\n\nreturn [{ json: { subject: `GSD Weekly Review - ${now.toLocaleDateString()}`, html } }];"
+      },
+      "id": "compile-digest",
+      "name": "Compile Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 370]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_USER || 'gsd@localhost' }}",
+        "toEmail": "={{ $env.DIGEST_RECIPIENT || 'user@example.com' }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Digest Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [960, 370],
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Weekly Trigger": {
+      "main": [
+        [
+          { "node": "Fetch Inbox Items", "type": "main", "index": 0 },
+          { "node": "Fetch Active Items", "type": "main", "index": 0 },
+          { "node": "Fetch Pending Items", "type": "main", "index": 0 },
+          { "node": "Fetch Active Projects", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Inbox Items": {
+      "main": [
+        [{ "node": "Compile Digest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Active Items": {
+      "main": [
+        [{ "node": "Compile Digest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Pending Items": {
+      "main": [
+        [{ "node": "Compile Digest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Active Projects": {
+      "main": [
+        [{ "node": "Compile Digest", "type": "main", "index": 0 }]
+      ]
+    },
+    "Compile Digest": {
+      "main": [
+        [{ "node": "Send Digest Email", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
