@@ -6,7 +6,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "capture",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "webhook-capture",
