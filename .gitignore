@@ -12,3 +12,4 @@ dist/
 .DS_Store
 Thumbs.db
 nul
+k8s/secrets.yaml
