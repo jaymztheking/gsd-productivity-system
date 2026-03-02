@@ -5,7 +5,7 @@ interface ProjectSelectorProps {
   projects: Project[];
   selected: string | null;
   onSelect: (projectId: string | null) => void;
-  onCreateNew: (name: string, indexNotes?: string) => Promise<Project>;
+  onCreateNew: (name: string, description?: string) => Promise<Project>;
 }
 
 export default function ProjectSelector({
@@ -21,6 +21,7 @@ export default function ProjectSelector({
   const handleCreate = async () => {
     if (!newName.trim()) return;
     const project = await onCreateNew(newName.trim(), newNotes.trim() || undefined);
+
     onSelect(project.id);
     setShowNew(false);
     setNewName("");
@@ -44,7 +45,7 @@ export default function ProjectSelector({
       >
         <option value="">None</option>
         {projects
-          .filter((p) => p.status === "active")
+          .filter((p) => p.status === "active" && p.parent_id === null)
           .map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -64,7 +65,7 @@ export default function ProjectSelector({
             autoFocus
           />
           <textarea
-            placeholder="Index notes (optional)"
+            placeholder="Description (optional)"
             value={newNotes}
             onChange={(e) => setNewNotes(e.target.value)}
             className="textarea"
