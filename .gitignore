@@ -13,3 +13,4 @@ dist/
 Thumbs.db
 nul
 k8s/secrets.yaml
+.claude/settings.local.json
