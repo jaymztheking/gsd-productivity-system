@@ -22,6 +22,14 @@ export default function Layout() {
           >
             Intake
           </NavLink>
+          <NavLink
+            to="/projects"
+            className={({ isActive }) =>
+              `nav-tab ${isActive ? "nav-tab--active" : ""}`
+            }
+          >
+            Projects
+          </NavLink>
         </div>
       </nav>
       <main className="main-content">

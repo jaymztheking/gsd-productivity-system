@@ -1,11 +1,12 @@
 {
   "name": "GSD Inbox Capture",
+  "active": true,
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "capture",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "webhook-capture",
@@ -17,7 +18,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://api:8000/next-actions",
+        "url": "http://api.gsd.svc.cluster.local:8000/next-actions",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ title: $json.body?.title || $json.title, status: 'inbox' }) }}",

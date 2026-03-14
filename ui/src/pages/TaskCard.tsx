@@ -19,7 +19,7 @@ interface TaskCardProps {
       project_id?: string | null;
     }
   ) => void;
-  onCreateProject: (name: string, indexNotes?: string) => Promise<Project>;
+  onCreateProject: (name: string, description?: string) => Promise<Project>;
 }
 
 export default function TaskCard({

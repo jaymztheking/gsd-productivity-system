@@ -1,5 +1,6 @@
 {
   "name": "GSD Weekly Review Digest",
+  "active": true,
   "nodes": [
     {
       "parameters": {
@@ -20,7 +21,7 @@
     },
     {
       "parameters": {
-        "url": "http://api:8000/next-actions?status=inbox",
+        "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=inbox",
         "options": {}
       },
       "id": "fetch-inbox",
@@ -31,7 +32,7 @@
     },
     {
       "parameters": {
-        "url": "http://api:8000/next-actions?status=active",
+        "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=active",
         "options": {}
       },
       "id": "fetch-active",
@@ -42,7 +43,7 @@
     },
     {
       "parameters": {
-        "url": "http://api:8000/next-actions?status=pending",
+        "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=pending",
         "options": {}
       },
       "id": "fetch-pending",
@@ -53,7 +54,7 @@
     },
     {
       "parameters": {
-        "url": "http://api:8000/projects?status=active",
+        "url": "http://api.gsd.svc.cluster.local:8000/projects?status=active",
         "options": {}
       },
       "id": "fetch-projects",

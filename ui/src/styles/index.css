@@ -442,6 +442,319 @@ body {
   color: var(--color-success);
 }
 
+/* === Project List === */
+.project-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.project-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+.project-list-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.project-list-item__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.project-list-item__desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-list-item__meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge--active {
+  background: color-mix(in srgb, var(--color-success) 20%, transparent);
+  color: var(--color-success);
+}
+
+.status-badge--complete {
+  background: color-mix(in srgb, var(--color-text-muted) 20%, transparent);
+  color: var(--color-text-muted);
+}
+
+.section-toggle {
+  font-size: 0.85rem;
+}
+
+/* === Project Detail === */
+.project-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-header__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 1;
+}
+
+.project-header__name:hover {
+  color: var(--color-primary);
+}
+
+.project-header__name-input {
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.project-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.project-section__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.project-section__text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+  white-space: pre-wrap;
+}
+
+.project-section__text:hover {
+  background: var(--color-surface);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+/* === Link Editor === */
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  min-height: var(--tap-target);
+}
+
+.link-row__label {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-row__label:hover {
+  text-decoration: underline;
+}
+
+.link-row__actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* === Task Order List === */
+.task-order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  min-height: var(--tap-target);
+}
+
+.task-order-row--complete {
+  opacity: 0.5;
+}
+
+.task-order-row__arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.order-btn {
+  width: 32px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.order-btn:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.order-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.task-order-row__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-order-row__title {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.task-order-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.complete-check {
+  color: var(--color-success);
+  font-size: 1.1rem;
+  width: var(--tap-target);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* === Button Row === */
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* === Danger Zone === */
+.danger-zone {
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.btn--danger-outline {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.btn--danger-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+}
+
+/* === Stack xs === */
+.stack--xs {
+  gap: 0.375rem;
+}
+
+/* === History Rows === */
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  min-height: 36px;
+}
+
+.history-row__icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  width: 20px;
+  text-align: center;
+}
+
+.history-row__icon--completed {
+  color: var(--color-success);
+}
+
+.history-row__icon--deleted {
+  color: var(--color-text-muted);
+}
+
+.history-row__title {
+  font-size: 0.85rem;
+}
+
+.history-row__title--completed {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.history-row__title--deleted {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* === Capture Form === */
+.capture-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.capture-form .input {
+  flex: 1;
+}
+
 /* === Intake-specific === */
 .inbox-counter {
   font-size: 0.85rem;

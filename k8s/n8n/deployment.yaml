@@ -1,0 +1,56 @@
+# Note: workflows stored in ./n8n/workflows/ are not auto-mounted in k3s.
+# After first deploy, import them manually via the n8n UI or CLI:
+#   kubectl exec -n gsd deploy/n8n -- n8n import:workflow --input=/path/to/workflow.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: gsd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8n
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      containers:
+        - name: n8n
+          image: n8nio/n8n:latest
+          ports:
+            - containerPort: 5678
+          env:
+            - name: N8N_BASIC_AUTH_ACTIVE
+              value: "true"
+            - name: N8N_BASIC_AUTH_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: gsd-config
+                  key: N8N_BASIC_AUTH_USER
+            - name: N8N_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gsd-secrets
+                  key: N8N_BASIC_AUTH_PASSWORD
+            - name: WEBHOOK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: gsd-config
+                  key: N8N_WEBHOOK_URL
+          volumeMounts:
+            - name: n8n-data
+              mountPath: /home/node/.n8n
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: n8n-data
+          persistentVolumeClaim:
+            claimName: n8n-pvc

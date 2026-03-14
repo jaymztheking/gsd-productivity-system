@@ -55,6 +55,7 @@ services:
       - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://n8n:5678}
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows
     depends_on:
       - api
 

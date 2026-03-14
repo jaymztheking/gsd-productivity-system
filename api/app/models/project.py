@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, String, Text, func
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -20,7 +20,10 @@ class Project(Base):
         nullable=False,
         default=ProjectStatus.active,
     )
-    index_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()
     )
@@ -28,4 +31,18 @@ class Project(Base):
         nullable=False, server_default=func.now(), onupdate=func.now()
     )
 
-    next_actions = relationship("NextAction", back_populates="project")
+    # Relationships
+    parent = relationship(
+        "Project", remote_side="Project.id", back_populates="children"
+    )
+    children = relationship("Project", back_populates="parent", lazy="selectin")
+    next_actions = relationship(
+        "NextAction", back_populates="project", lazy="selectin"
+    )
+    links = relationship(
+        "ProjectLink",
+        back_populates="project",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="ProjectLink.sort_order",
+    )

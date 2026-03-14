@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
@@ -17,4 +17,7 @@ class Tag(Base):
     category: Mapped[TagCategory] = mapped_column(
         Enum(TagCategory, name="tag_category", create_constraint=True),
         nullable=False,
+    )
+    sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
     )

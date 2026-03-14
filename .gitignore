@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.*
+!.env.example
 node_modules/
 dist/
 .vite/
@@ -11,3 +13,26 @@ dist/
 *.db
 .DS_Store
 Thumbs.db
+nul
+k8s/secrets.yaml
+k8s/**/secrets.yaml
+.claude/settings.local.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+
+# Docker override files (often contain local secrets)
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Kubernetes secret/credential files
+*secrets*.yaml
+*secrets*.yml
+!*secrets*.example.yaml
+!*secrets*.example.yml
