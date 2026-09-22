@@ -2,8 +2,10 @@
 id: TASK-001
 title: Fix Siri Shortcut task creation failing when off the home network
 status: To Do
-assignee: []
+assignee:
+  - James
 created_date: '2026-09-22 22:39'
+updated_date: '2026-09-22 22:41'
 labels:
   - shortcuts
   - networking
