@@ -22,3 +22,19 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
+
+<!-- Project-specific. Kept outside the generated block above so `backlog` upgrades do not overwrite it. -->
+<CRITICAL_INSTRUCTION>
+
+## Branch Policy for Backlog Tasks
+
+**Create, edit, and archive Backlog tasks on `main`. Branch only when implementation begins.**
+
+Backlog.md runs with `auto_commit: true`, so every `backlog task create|edit|archive` immediately commits to whichever branch is checked out. Task records describe work that has not been done yet and are not tied to any one implementation, so they belong on `main` where every branch and every agent can see them. Tasks created on a feature branch are invisible to anyone not on that branch and go stale if it is abandoned.
+
+- Before running any `backlog` command that writes (`create`, `edit`, `archive`, `complete`), check out `main` first.
+- Create the feature branch at the moment you start changing code, not when you plan the work.
+- Code changes belong on the feature branch. Backlog writes made *during* implementation — status changes, plans, implementation notes, final summaries — travel with that branch and merge back alongside the code, which is expected.
+- If task commits land on a feature branch by mistake, cherry-pick them onto `main` rather than leaving them stranded there.
+
+</CRITICAL_INSTRUCTION>
