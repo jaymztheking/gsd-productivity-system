@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-26 03:55'
-updated_date: '2026-09-26 15:58'
+updated_date: '2026-09-26 16:02'
 labels:
   - n8n
   - digest
@@ -52,6 +52,16 @@ One hardcoded-configuration issue found earlier still stands and is worth fixing
 - [ ] #6 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
 - [ ] #7 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Findings (2026-09-26): live n8n is 2.38.7 in namespace n8n (not this repo's k8s/n8n manifest), no GENERIC_TIMEZONE so it runs in UTC. There are SIX 'GSD Weekly Review Digest' workflows and NONE is active/published, so the schedule never fires. Every live copy's trigger is {triggerAtHour: 19} with no field, which would run daily at 19:00 at a pseudo-random minute. The repo copy's triggerAtDay: 7 is ignored without field: weeks. n8n source confirms weekday values are 0=Sunday..6=Saturday.
+1. Repo: trigger -> field weeks, triggerAtDay [0], triggerAtHour 19, triggerAtMinute 0; workflow settings.timezone America/Denver (user is in Mountain time). DONE on branch.
+2. Sender/recipient from configuration (approach pending user decision).
+3. Live: import the fixed workflow over the copy that holds the working credentials (wayvHwteu1n9IPRk, last updated during TASK-003), publish it, archive the other five digest copies (pending user approval).
+4. Verify: temporarily schedule a near-future time (or wait for Sunday 19:00 MT), confirm a trigger-mode execution and email delivery, check rendering incl. empty sections, then restore the Sunday schedule.
+<!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
