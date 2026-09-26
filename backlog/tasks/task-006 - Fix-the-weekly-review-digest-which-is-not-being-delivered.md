@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-26 03:55'
-updated_date: '2026-09-26 16:02'
+updated_date: '2026-09-26 16:05'
 labels:
   - n8n
   - digest
@@ -48,9 +48,9 @@ One hardcoded-configuration issue found earlier still stands and is worth fixing
 - [ ] #2 The schedule trigger day-of-week value is corrected against the numbering used by the n8n version in use, so that it resolves to Sunday
 - [ ] #3 The timezone the schedule is evaluated in is confirmed, and 19:00 means 19:00 local rather than UTC
 - [ ] #4 The workflow is confirmed active in the live instance, and any duplicate copies created by re-import are removed
-- [ ] #5 Sender and recipient come from configuration rather than hardcoded addresses, with the variables actually passed into the n8n container and documented in `.env.example`
-- [ ] #6 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
-- [ ] #7 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
+- [ ] #5 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
+- [ ] #6 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
+- [ ] #7 Sender and recipient are set in one obvious place (a Digest Settings node in the workflow) rather than hardcoded in the email node, and the unused SMTP_*/DIGEST_RECIPIENT entries are removed from `.env.example` (user decision 2026-09-26: no $env, since n8n 2.x blocks env access in expressions and the live n8n deployment is outside this repo)
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -61,6 +61,8 @@ Findings (2026-09-26): live n8n is 2.38.7 in namespace n8n (not this repo's k8s/
 2. Sender/recipient from configuration (approach pending user decision).
 3. Live: import the fixed workflow over the copy that holds the working credentials (wayvHwteu1n9IPRk, last updated during TASK-003), publish it, archive the other five digest copies (pending user approval).
 4. Verify: temporarily schedule a near-future time (or wait for Sunday 19:00 MT), confirm a trigger-mode execution and email delivery, check rendering incl. empty sections, then restore the Sunday schedule.
+
+Decisions 2026-09-26 (user): sender/recipient via a Digest Settings Set node, not env vars. Archive the 5 extra digest copies and the inactive duplicate GSD Inbox Capture (Hdqh83gHkUkfs_QQj5jKM); keep wayvHwteu1n9IPRk as the digest.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
