@@ -1,9 +1,10 @@
 ---
 id: TASK-006
-title: 'Fix the weekly review digest, which is not being delivered'
+title: Fix the weekly digest not firing on schedule
 status: To Do
 assignee: []
 created_date: '2026-09-26 03:55'
+updated_date: '2026-09-26 05:30'
 labels:
   - n8n
   - digest
@@ -24,29 +25,29 @@ ordinal: 6000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-The GSD Weekly Review Digest is not arriving. The workflow (`n8n/workflows/weekly-digest.json`) is marked `active: true` and is meant to run Sundays at 19:00, query the API for inbox items, active items, pending items and projects, compile an HTML summary, and email it. James reports it has not been working. LOG.md and commit history show a previous fix attempt plus integration tests (`api/tests/test_digest_pipeline.py`), so the data pipeline itself has been exercised before; what is failing now is unconfirmed.
+The GSD Weekly Review Digest does not arrive, but the pipeline itself works. On 2026-09-26, while verifying TASK-003, the workflow was run manually against the live cluster and completed end to end: all four API fetches returned 200, the digest compiled, and the email was accepted by Gmail with response `250 2.0.0 OK ... gsmtp`, message id 37f94ea0-6d31-d58e-34bc-ac7b8f918f39. So the problem is the trigger, not the data pipeline or delivery.
 
-Three candidate causes were identified by inspecting the workflow, in rough order of likelihood. All are hypotheses and none has been verified against the running instance:
+Two of the three causes originally suspected are now eliminated:
 
-1. **No SMTP credential attached.** The `Send Digest Email` node carries no `credentials` key in the exported workflow. An n8n `emailSend` node with no SMTP credential cannot send, which would break delivery while leaving every earlier node green. Note that n8n exports reference credentials by id rather than embedding them, so absence in the JSON is suggestive rather than conclusive; the live instance must be checked.
+- **SMTP credential missing** — disproved. A credential is attached and a manual run delivered successfully.
+- **Cluster-internal API hostname unreachable** — disproved. n8n runs inside the k3s cluster in the `n8n` namespace on node cherrypi, and `api.gsd.svc.cluster.local:8000` resolves for it; all four fetches returned 200 and are visible in the api pod log from 10.42.2.175.
 
-2. **SMTP settings are documented but never wired up.** `.env.example` defines `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `DIGEST_RECIPIENT`, but the n8n service in `docker-compose.yml` passes none of them into the container, and the workflow hardcodes `james.medaugh@gmail.com` as both sender and recipient instead of reading them. So the documented configuration path does not connect to anything.
+What remains is that a manual run works while a scheduled run never arrives. The trigger is configured `triggerAtDay: 7, triggerAtHour: 19`, and the README describes the intent as Sunday 19:00. Day-of-week numbering is the obvious first suspect: n8n uses 0 for Sunday in its schedule trigger, so 7 may be out of range or interpreted unexpectedly, in which case the trigger never fires. Timezone is the second: n8n evaluates schedules in its own configured timezone (`GENERIC_TIMEZONE`), which if unset defaults to UTC and would fire at a different local hour than intended.
 
-3. **Cluster-internal API hostname may be unreachable from n8n.** All four fetch nodes call `http://api.gsd.svc.cluster.local:8000`, a name that only resolves inside the k3s cluster. If the live n8n runs outside the cluster — which the capture webhook at `192.168.50.122:5678` suggests, since every Service in `k8s/` is ClusterIP with no NodePort — all four fetches fail and the digest never has data to send. This is the same unresolved question TASK-004 settles, which is why this task depends on it.
+Also worth confirming the workflow is actually active in the live instance, since an inactive workflow still runs manually but is never triggered on a schedule, and imports do not preserve the active flag.
 
-Worth also confirming the schedule itself fires: the trigger is configured `triggerAtDay: 7, triggerAtHour: 19`, and day-of-week numbering should be checked against the n8n version in use so that 7 means Sunday rather than being out of range.
+Note the workflow was re-imported during TASK-003, so check for duplicate copies of "GSD Weekly Review Digest" in the workflows list; n8n creates new workflows on import rather than replacing them, and a stale inactive copy alongside an active one is confusing to diagnose.
 
-Depends on TASK-003 because the digest fetches will need the new API token, and on TASK-004 because that task establishes where n8n actually runs and how it reaches the API.
+One hardcoded-configuration issue found earlier still stands and is worth fixing while in here: the workflow hardcodes `james.medaugh@gmail.com` as both sender and recipient, while `.env.example` documents `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` and `DIGEST_RECIPIENT` that the n8n service in `docker-compose.yml` never passes into the container. The documented configuration path connects to nothing.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The actual point of failure is identified from n8n execution history for the digest workflow, naming which node fails and with what error, rather than inferred from the workflow definition
-- [ ] #2 Whether the four API fetch calls succeed from the live n8n instance is confirmed, with the working API base URL recorded
-- [ ] #3 An SMTP credential is attached to the email node and a test send succeeds
-- [ ] #4 Sender and recipient come from configuration rather than hardcoded addresses, with the corresponding variables passed into the n8n container and documented in `.env.example`
-- [ ] #5 The schedule trigger is confirmed to fire on Sunday at 19:00 in the expected timezone, verified against the n8n version in use rather than assumed from the day number
-- [ ] #6 A manual run of the workflow produces a digest email containing real data in all four sections
-- [ ] #7 A scheduled run is confirmed delivered without manual intervention
-- [ ] #8 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
+- [ ] #1 The reason scheduled runs do not fire is identified from the n8n execution history and the trigger configuration, distinguishing a trigger that never fires from one that fires at an unexpected time
+- [ ] #2 The schedule trigger day-of-week value is corrected against the numbering used by the n8n version in use, so that it resolves to Sunday
+- [ ] #3 The timezone the schedule is evaluated in is confirmed, and 19:00 means 19:00 local rather than UTC
+- [ ] #4 The workflow is confirmed active in the live instance, and any duplicate copies created by re-import are removed
+- [ ] #5 Sender and recipient come from configuration rather than hardcoded addresses, with the variables actually passed into the n8n container and documented in `.env.example`
+- [ ] #6 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
+- [ ] #7 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
 <!-- AC:END -->
