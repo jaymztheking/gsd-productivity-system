@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-26 03:55'
-updated_date: '2026-09-26 16:05'
+updated_date: '2026-09-26 16:12'
 labels:
   - n8n
   - digest
@@ -69,4 +69,11 @@ Decisions 2026-09-26 (user): sender/recipient via a Digest Settings Set node, no
 
 <!-- SECTION:NOTES:BEGIN -->
 Renarrowed 2026-09-26 after TASK-003 deployment testing. A manual run delivered successfully, which eliminated the missing-SMTP-credential and unreachable-API hypotheses this task was created with. Evidence: four fetches 200 from the n8n pod in the api log, and SMTP response 250 2.0.0 OK from Gmail. Scope is now the schedule trigger rather than the pipeline. Also note the digest now authenticates to the API using the GSD API Token credential added in TASK-003, so if it ever starts returning 401 the credential is the first thing to check.
+
+Root cause (AC1): in the live n8n (2.38.7, namespace n8n) all six 'GSD Weekly Review Digest' copies were unpublished, so no schedule was ever registered. That means the trigger never fired at all, not that it fired at an unexpected time. Separately, every live copy's trigger was {triggerAtHour: 19} with no field (daily), and the repo copy's triggerAtDay: 7 is ignored without field: weeks, so publishing any of them would have sent a digest every day at 19:00 UTC at a random minute. I could not read the execution history directly (a read-only query on the n8n database was blocked by the permission checker), so the 'never fired' conclusion rests on the unpublished state.
+Weekday numbering confirmed from n8n's own ScheduleTrigger/GenericFunctions source in the running pod: Sunday = 0 (default [0]); the day is only used when field = weeks; and without triggerAtMinute n8n picks a stable pseudo-random minute.
+Timezone: the n8n pod has no GENERIC_TIMEZONE (date = UTC). Fixed per workflow via settings.timezone = America/Denver (the user's Windows zone is Mountain), so the fix doesn't depend on the out-of-repo n8n deployment.
+Duplicates: the 5 extra digest copies and the duplicate inactive Inbox Capture (Hdqh83gHkUkfs_QQj5jKM) were already isArchived = true when re-exported. wayvHwteu1n9IPRk is the only live digest.
+Live update: the repo workflow was imported over wayvHwteu1n9IPRk, keeping its live credential ids (GSD API Token oYF4SIR6WgX2VZQd, SMTP account ygBtEFn5e291oEMk), because the repo JSON links credentials only by name and the email node's credentials are empty in the repo. The CLI publish:workflow only takes effect after an n8n restart, so it was published from the UI instead, which applies immediately without interrupting the capture webhook. Import resets the workflow to unpublished.
+Repo committed f0a1d72.
 <!-- SECTION:NOTES:END -->
