@@ -7,8 +7,12 @@
         "rule": {
           "interval": [
             {
-              "triggerAtDay": 7,
-              "triggerAtHour": 19
+              "field": "weeks",
+              "triggerAtDay": [
+                0
+              ],
+              "triggerAtHour": 19,
+              "triggerAtMinute": 0
             }
           ]
         }
@@ -17,6 +21,35 @@
       "name": "Weekly Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
+      "position": [
+        40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "digest-from",
+              "name": "digestFrom",
+              "value": "james.medaugh@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "digest-to",
+              "name": "digestTo",
+              "value": "james.medaugh@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "digest-settings",
+      "name": "Digest Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         250,
         300
@@ -129,8 +162,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "james.medaugh@gmail.com",
-        "toEmail": "james.medaugh@gmail.com",
+        "fromEmail": "={{ $('Digest Settings').first().json.digestFrom }}",
+        "toEmail": "={{ $('Digest Settings').first().json.digestTo }}",
         "subject": "={{ $json.subject }}",
         "html": "={{ $json.html }}",
         "options": {}
@@ -148,6 +181,17 @@
   ],
   "connections": {
     "Weekly Trigger": {
+      "main": [
+        [
+          {
+            "node": "Digest Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest Settings": {
       "main": [
         [
           {
@@ -215,7 +259,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "America/Denver"
   },
   "tags": []
 }

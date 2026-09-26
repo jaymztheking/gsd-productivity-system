@@ -353,6 +353,25 @@ Import the workflow JSON files from `n8n/workflows/` into your n8n instance:
 
 To import: n8n UI → Workflows → Import from File.
 
+### Weekly Digest configuration
+
+- **Schedule** — Sunday 19:00 in `America/Denver`, set by the workflow's own
+  timezone setting, so it does not depend on n8n's `GENERIC_TIMEZONE` (unset on
+  the cluster, which means UTC). n8n numbers weekdays 0 = Sunday … 6 = Saturday,
+  and ignores the day unless the trigger interval is set to weeks.
+- **Sender and recipient** — edit the **Digest Settings** node at the start of the
+  workflow. They are not environment variables, because n8n blocks `$env` in
+  expressions by default (`N8N_BLOCK_ENV_ACCESS_IN_NODE`) and lifting that would
+  expose every n8n env var to every workflow.
+- **SMTP** — an SMTP credential attached to the **Send Digest Email** node.
+
+**A workflow only runs on its schedule once it is published** (n8n 2.x's name for
+activating). An imported workflow always arrives unpublished, and a manual run
+works either way, so a digest that runs by hand but never arrives on Sunday is
+almost always unpublished. Importing a file also creates a new workflow rather
+than replacing the old one unless the JSON carries the existing workflow's id —
+archive stale copies so only one digest exists.
+
 ## API Endpoints
 
 ```
