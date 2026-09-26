@@ -156,6 +156,96 @@ integration suite and does need a live API:
 API_URL=http://localhost:8000 PYTHONPATH=api pytest api/tests/test_digest_pipeline.py -v
 ```
 
+## Remote Access (Cloudflare Tunnel)
+
+GSD is reachable from anywhere without a port open on the router. `cloudflared`
+runs in-cluster and dials *outbound* to Cloudflare, holding the connection open;
+public requests arrive at Cloudflare and ride back down that established
+connection. Nothing listens on the router, and clients speak ordinary HTTPS, so
+no VPN profile or app is needed on any device — which is what makes Apple Watch
+capture possible, since watchOS has no VPN client.
+
+```
+                          ┌─ Cloudflare Access (SSO) ─┐
+browser ──https──> gsd.medaughsolutions.com ──────────┴──> ui:3000 ──> api:8000
+                                                                 (nginx adds token)
+
+Shortcut ─https─> capture.medaughsolutions.com/webhook/capture ──> n8n:80 ──> api:8000
+                          (header secret, no SSO)
+```
+
+### Two hostnames, on purpose
+
+| Hostname | Origin | Protected by |
+|---|---|---|
+| `gsd.medaughsolutions.com` | `ui.gsd.svc.cluster.local:3000` | Cloudflare Access SSO |
+| `capture.medaughsolutions.com` | `n8n.n8n.svc.cluster.local:80`, path `/webhook/capture` only | `X-Webhook-Token` header |
+
+Access policies attach per hostname. Keeping capture on its own hostname means
+the SSO policy cannot end up in front of the Shortcut, which is unable to
+complete an interactive challenge and would fail with a generic server error. A
+path-bypass rule on a single shared hostname would also work, but is one careless
+edit away from silently breaking capture.
+
+The capture hostname is restricted to `^/webhook/capture/?$`. Everything else on
+it — the n8n editor, other webhooks — is answered 404 by cloudflared and never
+reaches the cluster.
+
+**The tunnel points at the `ui` service, never at `api` directly.** The API
+requires a token the browser cannot hold, so the UI's nginx attaches it in
+transit. A Traefik ingress that routed `/api` straight to the API bypassed that
+injection and had to be deleted; a tunnel aimed at the API would reproduce the
+same failure.
+
+### A consequence worth understanding
+
+Because nginx attaches the API token in transit, **anything that can reach the UI
+host can use the API without presenting a token.** On the LAN that means anyone
+on your network; publicly it means anyone who passes Cloudflare Access. That is
+inherent to a browser app that cannot hold a secret — Access is the thing
+standing between the internet and your data, not the API token.
+
+### Configuration
+
+Manifests live in `k8s/cloudflared/`. Routing is in `configmap.yaml` rather than
+configured by clicking in the dashboard, so it is reviewable and version
+controlled. This is why the two public hostnames are plain **proxied CNAME
+records** in Cloudflare DNS pointing at `<tunnel-id>.cfargotunnel.com`, rather
+than entries added through the tunnel's "Public Hostname" tab — the latter writes
+routing into Cloudflare's side, which then overrides the local config.
+
+Two replicas spread across nodes, so a single node reboot does not drop the
+tunnel. Verified by deleting one connector pod: requests continued uninterrupted
+and Kubernetes scheduled a replacement on another node.
+
+```bash
+# Deploy (after creating the token Secret — see k8s/cloudflared/secret.yaml.example)
+kubectl apply -f k8s/cloudflared/
+
+# Health
+kubectl -n cloudflared get pods
+kubectl -n cloudflared logs deploy/cloudflared --tail=20
+```
+
+### Rotating the tunnel token
+
+Tunnel credentials are separate from the API and webhook secrets. To rotate,
+create a new tunnel in the dashboard (or refresh the connector token), then:
+
+```bash
+kubectl -n cloudflared delete secret cloudflared-token
+kubectl -n cloudflared create secret generic cloudflared-token --from-literal=token=<new-token>
+kubectl -n cloudflared rollout restart deploy/cloudflared
+```
+
+If the tunnel id changes, update both CNAME records to the new
+`<tunnel-id>.cfargotunnel.com` target.
+
+### On-LAN access is unchanged
+
+`gsd.home.lab` still resolves through Pi-hole to the Traefik VIP and is served by
+the existing ingress, independent of the tunnel. It is not behind Access.
+
 ## Swapping Postgres to Cloud
 
 Change one environment variable:

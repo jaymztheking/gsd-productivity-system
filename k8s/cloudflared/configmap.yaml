@@ -1,0 +1,49 @@
+# Tunnel routing. Kept here rather than configured by clicking in the
+# Cloudflare dashboard so the mapping is version-controlled and reviewable.
+#
+# Rules are evaluated top to bottom, first match wins, so the catch-alls must
+# stay last.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+data:
+  config.yaml: |
+    # Connector-token tunnels take their credentials from the token, so no
+    # tunnel id or credentials-file belongs here.
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+
+    ingress:
+      # --- The GSD UI, behind Cloudflare Access SSO ---
+      #
+      # Points at the ui service, NEVER at the api service. The API requires a
+      # token the browser cannot hold, so the UI's nginx attaches it in transit
+      # (ui/nginx.conf.template). A Traefik ingress that sent /api straight to
+      # the API bypassed that injection and had to be deleted in TASK-003;
+      # aiming the tunnel at the API would reproduce that failure exactly.
+      - hostname: gsd.medaughsolutions.com
+        service: http://ui.gsd.svc.cluster.local:3000
+
+      # --- The capture webhook, NOT behind Access ---
+      #
+      # iOS Shortcuts cannot complete an interactive SSO challenge, so this
+      # path is authenticated by the n8n header-auth secret instead. It lives
+      # on its own hostname because Access policies attach per hostname:
+      # sharing one hostname with the UI would leave capture one policy edit
+      # away from being silently locked out.
+      #
+      # Restricted to the single capture path. Without this, the n8n editor and
+      # every other webhook on that instance would be publicly reachable.
+      - hostname: capture.medaughsolutions.com
+        path: ^/webhook/capture/?$
+        service: http://n8n.n8n.svc.cluster.local:80
+
+      # Anything else on the capture hostname is refused by cloudflared and
+      # never reaches the cluster.
+      - hostname: capture.medaughsolutions.com
+        service: http_status:404
+
+      # Required final catch-all.
+      - service: http_status:404
