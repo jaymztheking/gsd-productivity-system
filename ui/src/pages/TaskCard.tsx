@@ -22,6 +22,20 @@ interface TaskCardProps {
   onCreateProject: (name: string, description?: string) => Promise<Project>;
 }
 
+function tagsByCategoryOf(
+  action: NextAction
+): Record<TagCategory, string | null> {
+  const map: Record<TagCategory, string | null> = {
+    context: null,
+    time: null,
+    energy: null,
+  };
+  action.tags.forEach((t) => {
+    map[t.category] = t.id;
+  });
+  return map;
+}
+
 export default function TaskCard({
   action,
   tagsByCategory,
@@ -33,22 +47,26 @@ export default function TaskCard({
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState(action.title);
   const [notes, setNotes] = useState(action.notes ?? "");
-  const [selectedTags, setSelectedTags] = useState<
-    Record<TagCategory, string | null>
-  >(() => {
-    const map: Record<TagCategory, string | null> = {
-      context: null,
-      time: null,
-      energy: null,
-    };
-    action.tags.forEach((t) => {
-      map[t.category] = t.id;
-    });
-    return map;
-  });
+  const [selectedTags, setSelectedTags] = useState(() =>
+    tagsByCategoryOf(action)
+  );
   const [projectId, setProjectId] = useState(action.project_id);
   const [status, setStatus] = useState(action.status as "active" | "pending");
   const [exiting, setExiting] = useState(false);
+
+  // Re-seed the editor from the action each time it opens, so it always
+  // starts from the tags shown on the card rather than state left over from
+  // a cancelled edit or an earlier render.
+  const toggleEditor = () => {
+    if (!expanded) {
+      setTitle(action.title);
+      setNotes(action.notes ?? "");
+      setSelectedTags(tagsByCategoryOf(action));
+      setProjectId(action.project_id);
+      setStatus(action.status as "active" | "pending");
+    }
+    setExpanded(!expanded);
+  };
 
   const handleComplete = () => {
     setExiting(true);
@@ -76,7 +94,7 @@ export default function TaskCard({
       {/* Collapsed view */}
       <div
         className="row row--between gap-md"
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggleEditor}
         style={{ cursor: "pointer" }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>

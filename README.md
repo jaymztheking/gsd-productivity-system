@@ -145,11 +145,12 @@ operation: change it in the n8n credential and in the Shortcut's header.
 
 ```bash
 pip install -r api/requirements.txt          # includes pytest and httpx
-PYTHONPATH=api pytest api/tests/test_auth.py -v
+PYTHONPATH=api pytest api/tests/test_auth.py api/tests/test_next_action_tags.py -v
 ```
 
 `test_auth.py` needs no database or running services — it stubs the session and
-the crud calls to exercise the auth layer alone. `test_digest_pipeline.py` is an
+the crud calls to exercise the auth layer alone. `test_next_action_tags.py` runs
+the real crud functions against an in-memory SQLite database (via `aiosqlite`). `test_digest_pipeline.py` is an
 integration suite and does need a live API:
 
 ```bash

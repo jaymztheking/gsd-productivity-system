@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -96,19 +96,12 @@ async def update_next_action(
     if data.project_id is not None:
         action.project_id = data.project_id
 
-    # Update tags if provided (replace all)
+    # Update tags if provided (replace all). Assigning the collection lets
+    # the ORM diff old against new; a raw DELETE first would leave the loaded
+    # collection stale, so tags kept across the edit were never re-inserted.
     if data.tag_ids is not None:
-        # Clear existing associations
-        await session.execute(
-            delete(next_action_tags).where(
-                next_action_tags.c.next_action_id == action.id
-            )
-        )
-        await session.flush()
-
         if data.tag_ids:
-            tags = await _fetch_tags(session, data.tag_ids)
-            action.tags = tags
+            action.tags = await _fetch_tags(session, data.tag_ids)
         else:
             action.tags = []
 
