@@ -51,3 +51,9 @@ One hardcoded-configuration issue found earlier still stands and is worth fixing
 - [ ] #6 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
 - [ ] #7 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Renarrowed 2026-09-26 after TASK-003 deployment testing. A manual run delivered successfully, which eliminated the missing-SMTP-credential and unreachable-API hypotheses this task was created with. Evidence: four fetches 200 from the n8n pod in the api log, and SMTP response 250 2.0.0 OK from Gmail. Scope is now the schedule trigger rather than the pipeline. Also note the digest now authenticates to the API using the GSD API Token credential added in TASK-003, so if it ever starts returning 401 the credential is the first thing to check.
+<!-- SECTION:NOTES:END -->
