@@ -31,12 +31,12 @@ The API update replaces the whole tag set whenever `tag_ids` is sent (api/app/cr
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 Reproduce the reported case: a task tagged only energy=easy, then adding context and time tags in the Engage editor and saving, keeps energy=easy alongside the new tags
-- [ ] #2 Saving from the Engage editor never removes a tag in a category the user did not change
-- [ ] #3 Explicitly deselecting a tag in the editor and saving still removes that tag
+- [x] #2 Saving from the Engage editor never removes a tag in a category the user did not change
+- [x] #3 Explicitly deselecting a tag in the editor and saving still removes that tag
 - [ ] #4 The tags pre-selected in the editor always match the tag badges displayed on the card, including after a previous save, a list refresh, or a filter change
-- [ ] #5 Behaviour is correct across repeated edit/save cycles on the same card without reloading the page
-- [ ] #6 Root cause is recorded in the implementation notes
-- [ ] #7 A regression test (UI or API, whichever layer holds the bug) covers the reported scenario
+- [x] #5 Behaviour is correct across repeated edit/save cycles on the same card without reloading the page
+- [x] #6 Root cause is recorded in the implementation notes
+- [x] #7 A regression test (UI or API, whichever layer holds the bug) covers the reported scenario
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -56,4 +56,6 @@ Fix: drop the raw DELETE and let the collection assignment compute the diff (api
 UI hardening (AC4): TaskCard seeded editor state once on mount. It now re-seeds title/notes/tags/project/status from the action every time the editor opens, so it always starts from the badges shown and a cancelled edit no longer leaks into the next open.
 Tests: new api/tests/test_next_action_tags.py runs the real crud functions against in-memory SQLite (aiosqlite, added to test deps), one session per step like per-request. Before fix: 5/6 failed, reported case stored {errands, now} without easy. After fix: 6/6 pass; with test_auth.py 19 passed.
 Env notes (pre-existing, unrelated): test_auth.py needed asyncpg installed locally; ui tsc -b fails on vite.config.ts because @types/node is not installed in local node_modules. tsc -p tsconfig.app.json --noEmit is clean.
+
+Committed 5fc412b on fix/task-008-engage-tag-whackamole. Checked AC2/3/5/7 on the API regression tests (19 passed) and AC6 on these notes. AC1 and AC4 stay open: they need a manual check in the deployed Engage page (no local Docker/DB available to run the UI end to end).
 <!-- SECTION:NOTES:END -->
