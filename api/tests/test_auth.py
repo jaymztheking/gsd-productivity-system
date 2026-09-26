@@ -121,6 +121,27 @@ def test_write_is_not_performed_when_unauthorized(client, monkeypatch):
     assert called is False
 
 
+def test_malformed_body_is_refused_before_parsing(client):
+    """Auth must precede body decoding.
+
+    FastAPI decodes the request body before resolving dependencies, so with
+    only the per-router dependency a malformed payload returned 422 and
+    confirmed the endpoint existed. The middleware refuses it first.
+    """
+    resp = client.post(
+        WRITE_PATH,
+        content=b'{"title":',
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Invalid or missing API token"}
+
+
+def test_unknown_path_is_also_refused(client):
+    """The middleware fails safe: unrouted paths do not leak 404 vs 401."""
+    assert client.get("/does-not-exist").status_code == 401
+
+
 # --- authorized -----------------------------------------------------------
 
 def test_valid_token_allows_read(client):
