@@ -1,10 +1,11 @@
 ---
 id: TASK-006
 title: Fix the weekly digest not firing on schedule
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-26 03:55'
-updated_date: '2026-09-26 05:30'
+updated_date: '2026-09-26 15:58'
 labels:
   - n8n
   - digest
