@@ -1,5 +1,18 @@
 # Traefik Ingress (bundled with k3s)
 #
+# This is the ONLY ingress for gsd.home.lab. /api/* deliberately routes to the
+# ui service rather than straight to the api service, because the UI's nginx is
+# what attaches the X-API-Token header (see ui/nginx.conf.template). A separate
+# /api -> api ingress used to exist and had to be removed: Traefik matched the
+# more specific path first, so browser requests bypassed nginx entirely and the
+# UI got 401s once the API began requiring a token.
+#
+# Consequence worth understanding: anything that can reach this host can use the
+# API without presenting a token, because nginx adds it on the way through. That
+# is inherent to a browser app that cannot hold a secret. Edge authentication is
+# Cloudflare Access (TASK-004), and the tunnel must therefore point at the ui
+# service, never at the api service directly.
+#
 # Add a DNS A record in Pi-hole:
 #   gsd.home.lab -> 192.168.50.240  (Traefik MetalLB IP)
 #

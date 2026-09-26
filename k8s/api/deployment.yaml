@@ -23,6 +23,15 @@ spec:
                 secretKeyRef:
                   name: gsd-secrets
                   key: DATABASE_URL
+            # Migrations never authenticate, but alembic/env.py imports
+            # app.config, and Settings requires API_TOKEN with no default.
+            # Without it the init container fails validation and the pod
+            # never starts.
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gsd-secrets
+                  key: API_TOKEN
             - name: PYTHONPATH
               value: /app
       containers:
