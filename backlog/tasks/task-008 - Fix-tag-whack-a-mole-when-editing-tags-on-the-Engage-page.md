@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-26 14:17'
-updated_date: '2026-09-26 15:28'
+updated_date: '2026-09-26 15:30'
 labels:
   - ui
   - bug
@@ -47,3 +47,13 @@ The API update replaces the whole tag set whenever `tag_ids` is sent (api/app/cr
 3. UI hardening for AC4: TaskCard seeds editor state once on mount; re-seed title/notes/tags/project/status from the action prop whenever the editor is opened, so the editor always matches the badges.
 4. Verify: run the new test (fails before fix, passes after), tsc build of the UI, and a manual check against the running app if available.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Root cause (API, not UI): update_next_action ran a raw DELETE on next_action_tags, then assigned action.tags. The relationship collection was already loaded (selectinload in get_next_action) with the pre-edit tags and knew nothing of the raw DELETE, so the ORM diff only INSERTed tags that were new. Any tag kept across the edit (energy=easy in the report) was deleted and never re-inserted; re-saving an unchanged set wiped every tag. Removing a tag also made the ORM issue a second DELETE for rows already gone: SQLite raises StaleDataError on that, asyncpg does not check rowcounts so Postgres failed silently.
+Fix: drop the raw DELETE and let the collection assignment compute the diff (api/app/crud/next_actions.py); removed the now-unused delete import.
+UI hardening (AC4): TaskCard seeded editor state once on mount. It now re-seeds title/notes/tags/project/status from the action every time the editor opens, so it always starts from the badges shown and a cancelled edit no longer leaks into the next open.
+Tests: new api/tests/test_next_action_tags.py runs the real crud functions against in-memory SQLite (aiosqlite, added to test deps), one session per step like per-request. Before fix: 5/6 failed, reported case stored {errands, now} without easy. After fix: 6/6 pass; with test_auth.py 19 passed.
+Env notes (pre-existing, unrelated): test_auth.py needed asyncpg installed locally; ui tsc -b fails on vite.config.ts because @types/node is not installed in local node_modules. tsc -p tsconfig.app.json --noEmit is clean.
+<!-- SECTION:NOTES:END -->
