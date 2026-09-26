@@ -38,16 +38,8 @@
             }
           }
         },
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Token",
-              "value": "={{ $env.GSD_API_TOKEN }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "create-inbox-item",
       "name": "Create Inbox Item",
@@ -56,7 +48,12 @@
       "position": [
         480,
         300
-      ]
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD API Token"
+        }
+      }
     }
   ],
   "connections": {

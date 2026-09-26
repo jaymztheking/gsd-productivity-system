@@ -26,16 +26,8 @@
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=inbox",
         "options": {},
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Token",
-              "value": "={{ $env.GSD_API_TOKEN }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "fetch-inbox",
       "name": "Fetch Inbox Items",
@@ -45,22 +37,19 @@
         480,
         160
       ],
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD API Token"
+        }
+      }
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=active",
         "options": {},
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Token",
-              "value": "={{ $env.GSD_API_TOKEN }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "fetch-active",
       "name": "Fetch Active Items",
@@ -71,22 +60,19 @@
         300
       ],
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD API Token"
+        }
+      }
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=pending",
         "options": {},
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Token",
-              "value": "={{ $env.GSD_API_TOKEN }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "fetch-pending",
       "name": "Fetch Pending Items",
@@ -97,22 +83,19 @@
         440
       ],
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD API Token"
+        }
+      }
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/projects?status=active",
         "options": {},
-        "sendHeaders": true,
-        "specifyHeaders": "keypair",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Token",
-              "value": "={{ $env.GSD_API_TOKEN }}"
-            }
-          ]
-        }
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "fetch-projects",
       "name": "Fetch Active Projects",
@@ -123,7 +106,12 @@
         580
       ],
       "alwaysOutputData": true,
-      "executeOnce": true
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD API Token"
+        }
+      }
     },
     {
       "parameters": {

@@ -25,7 +25,7 @@ cp .env.example .env  # Edit as needed (ports, credentials)
 
 # Generate the shared API token and set it in .env
 openssl rand -hex 32
-# Paste the SAME value into both API_TOKEN and GSD_API_TOKEN in .env
+# Paste it into API_TOKEN in .env
 
 docker compose up --build -d
 
@@ -84,20 +84,38 @@ only if some other browser origin must call the API directly.
 |---|---|---|
 | API | `API_TOKEN` env | From `gsd-secrets` in k3s |
 | UI proxy | `API_TOKEN` env | Rendered into nginx config by envsubst at startup |
-| n8n workflows | `GSD_API_TOKEN` env | Referenced as `{{ $env.GSD_API_TOKEN }}` |
+| n8n workflows | `GSD API Token` credential | Header Auth, stored in n8n — see n8n Credentials below |
 | iOS Shortcut | Shortcut definition | Stored in the iCloud keychain |
 
 Local values live in `.env`; cluster values live in `k8s/secrets.yaml`. Both are
 gitignored. Only placeholders are ever committed.
 
-### Capture webhook secret
+### n8n Credentials
 
-The n8n capture webhook uses header auth, so the publicly reachable endpoint
-cannot be written to anonymously. The credential is created in the n8n UI
-(**Credentials → Header Auth**, named `GSD Capture Webhook Token`) and is
-referenced by name from `inbox-capture.json` rather than embedded in it, so the
-workflow can be committed safely. This is separate from `API_TOKEN`: the webhook
-secret guards n8n's front door, `API_TOKEN` guards the API behind it.
+n8n holds two secrets, and both live in n8n's credential store rather than in
+environment variables or in the workflow files. That is not a stylistic choice:
+n8n blocks `$env` access inside expressions by default
+(`N8N_BLOCK_ENV_ACCESS_IN_NODE`), so a header built from `{{ $env.X }}` fails at
+runtime with `access to env vars denied`. Credentials are referenced by name from
+the exported JSON, so the workflows stay safe to commit.
+
+Create both under **Credentials → Header Auth**:
+
+| Credential name | Header name | Value | Guards |
+|---|---|---|---|
+| `GSD Capture Webhook Token` | `X-Webhook-Token` | its own secret | n8n's public webhook |
+| `GSD API Token` | `X-API-Token` | same as `API_TOKEN` | the API behind it |
+
+Keep these two values **different**. They protect different hops — the first stops
+anonymous writes to the publicly reachable webhook, the second stops anonymous
+calls to the API — so sharing one value means a single leak defeats both layers.
+
+`GSD Capture Webhook Token` is attached to the Webhook node in
+`inbox-capture.json`. `GSD API Token` is attached to every HTTP Request node in
+both workflows: one in `inbox-capture.json`, four in `weekly-digest.json`.
+
+After importing a workflow, confirm the credential is still linked on each node.
+Imports reference credentials by name and sometimes drop the link.
 
 ### Rotating the token
 
@@ -111,12 +129,13 @@ NEW=$(openssl rand -hex 32)
 1. **k3s** — update `API_TOKEN` in `k8s/secrets.yaml`, apply it, then restart
    both deployments so they pick it up:
    `kubectl -n gsd rollout restart deploy/api deploy/ui`
-2. **n8n** — update `GSD_API_TOKEN` in the n8n environment and restart it. Both
-   workflows read it from there, so neither workflow JSON needs editing.
+2. **n8n** — update the value on the `GSD API Token` credential. All five HTTP
+   Request nodes across the two workflows use it, so nothing else in n8n changes
+   and neither workflow JSON needs editing.
 3. **iOS Shortcut** — update the `X-API-Token` header value in the Capture
    shortcut on one device; iCloud syncs it to Watch and CarPlay.
-4. **Local dev** — update `API_TOKEN` and `GSD_API_TOKEN` in `.env`, then
-   `docker compose up -d` to recreate the containers.
+4. **Local dev** — update `API_TOKEN` in `.env`, then `docker compose up -d` to
+   recreate the containers.
 
 Verify afterwards that a capture from the Shortcut still lands in the inbox, and
 that the UI still loads data. Rotating the webhook secret is a separate
