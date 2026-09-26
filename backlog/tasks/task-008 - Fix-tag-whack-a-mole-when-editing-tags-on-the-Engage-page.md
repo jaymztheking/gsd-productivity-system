@@ -1,11 +1,11 @@
 ---
 id: TASK-008
 title: Fix tag whack-a-mole when editing tags on the Engage page
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-26 14:17'
-updated_date: '2026-09-26 15:30'
+updated_date: '2026-09-26 15:55'
 labels:
   - ui
   - bug
@@ -30,10 +30,10 @@ The API update replaces the whole tag set whenever `tag_ids` is sent (api/app/cr
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Reproduce the reported case: a task tagged only energy=easy, then adding context and time tags in the Engage editor and saving, keeps energy=easy alongside the new tags
+- [x] #1 Reproduce the reported case: a task tagged only energy=easy, then adding context and time tags in the Engage editor and saving, keeps energy=easy alongside the new tags
 - [x] #2 Saving from the Engage editor never removes a tag in a category the user did not change
 - [x] #3 Explicitly deselecting a tag in the editor and saving still removes that tag
-- [ ] #4 The tags pre-selected in the editor always match the tag badges displayed on the card, including after a previous save, a list refresh, or a filter change
+- [x] #4 The tags pre-selected in the editor always match the tag badges displayed on the card, including after a previous save, a list refresh, or a filter change
 - [x] #5 Behaviour is correct across repeated edit/save cycles on the same card without reloading the page
 - [x] #6 Root cause is recorded in the implementation notes
 - [x] #7 A regression test (UI or API, whichever layer holds the bug) covers the reported scenario
@@ -58,4 +58,17 @@ Tests: new api/tests/test_next_action_tags.py runs the real crud functions again
 Env notes (pre-existing, unrelated): test_auth.py needed asyncpg installed locally; ui tsc -b fails on vite.config.ts because @types/node is not installed in local node_modules. tsc -p tsconfig.app.json --noEmit is clean.
 
 Committed 5fc412b on fix/task-008-engage-tag-whackamole. Checked AC2/3/5/7 on the API regression tests (19 passed) and AC6 on these notes. AC1 and AC4 stay open: they need a manual check in the deployed Engage page (no local Docker/DB available to run the UI end to end).
+
+DEPLOYED 2026-09-26: gsd-api:latest@sha256:64a31eb3 and gsd-ui:latest@sha256:eda493a8 pushed to Docker Hub and rolled out to the gsd namespace; running pod imageIDs confirmed to match. The in-image UI build ran tsc -b cleanly, confirming the local vite.config.ts error is only missing @types/node on this machine.
+LIVE API CHECK (prod Postgres, throwaway task): PATCH sequence [@errands #now +easy] from +easy only, same set re-saved, [@home #now +easy], [@home +easy], [] each stored exactly what was sent.
+BROWSER CHECK (Chrome, gsd.medaughsolutions.com/engage, throwaway task 'ZZ TASK-008 tag test'): AC1 - card with only +easy, selected @errands and #now, Save -> card showed +easy @errands #now. After a full page reload the tags persisted and the editor pre-selected exactly those three (AC4 after save and refresh). Deselected #now, Save -> +easy @errands (AC3 in UI). Selected @home then Cancel, reopened -> editor showed @errands/+easy, discarded edit did not leak. Applied the +easy filter on Engage, reopened -> editor still matched the badges (AC4 after filter change). Throwaway task soft-deleted afterwards (DELETE 204, gone from list).
+'Buy anniversary card' itself is complete with @errands #now +easy.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Editing tags on the Engage page dropped any tag the user kept (e.g. energy=easy vanished when adding context and time). The cause was in the API: update_next_action ran a raw DELETE on next_action_tags and then assigned action.tags, but the already-loaded collection still held the old tags, so the ORM only inserted new ones and kept tags were lost; re-saving an unchanged set wiped all tags. Fixed by removing the raw DELETE so the collection assignment computes the diff. TaskCard also now re-seeds its editor from the action every time it opens, so it always matches the card and cancelled edits don't carry over.
+
+Verified with 6 new regression tests in api/tests/test_next_action_tags.py against in-memory SQLite (5 failed before the fix, all pass after; 19 with test_auth.py), a live PATCH sequence against production Postgres, and a Chrome walkthrough of the deployed Engage page covering the reported case, removal, reload, cancel and filter. Deployed as gsd-api@sha256:64a31eb3 and gsd-ui@sha256:eda493a8.
+<!-- SECTION:FINAL_SUMMARY:END -->
