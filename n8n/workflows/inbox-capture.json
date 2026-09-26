@@ -6,7 +6,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "capture",
-        "responseMode": "onReceived",
+        "responseMode": "lastNode",
         "options": {},
         "authentication": "headerAuth"
       },

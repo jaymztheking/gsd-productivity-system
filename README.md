@@ -284,29 +284,64 @@ The same container images run on k3s. Create Kubernetes manifests (Deployment + 
 
 ## iOS Shortcut Setup (Voice Capture)
 
-The capture pipeline uses iOS Shortcuts to send voice input directly to the n8n webhook:
+"Hey Siri, Capture" dictates a task straight into the inbox, from iPhone, Apple
+Watch or CarPlay, **on any network**. The request is ordinary HTTPS with a secret
+header, so nothing is installed on any device — which is what makes the Watch
+work, since watchOS has no VPN client.
 
-1. Open the **Shortcuts** app on your iPhone
-2. Create a new Shortcut named **"Capture"** (short name works best for Siri, Watch, and CarPlay)
-3. **Action 1:** "Dictate Text" — captures your speech
+```
+Siri ─https─> capture.medaughsolutions.com/webhook/capture ──> n8n ──> API ──> inbox
+              X-Webhook-Token: <secret>              GSD API Token credential
+```
+
+1. Open **Shortcuts** on the iPhone
+2. Create a Shortcut named **"Capture"** — a single word is most reliable for
+   Siri, Watch and CarPlay recognition; multi-word names are flaky on watchOS
+3. **Action 1:** "Dictate Text"
 4. **Action 2:** "Get Contents of URL"
-   - URL: `http://<your-server-ip>:5678/webhook/capture`
+   - URL: `https://capture.medaughsolutions.com/webhook/capture`
    - Method: **POST**
-   - Headers: `Content-Type: application/json`
-   - Request Body (JSON): key `title`, value = the "Dictated Text" variable from Action 1
+   - Headers:
+     - `Content-Type: application/json`
+     - `X-Webhook-Token: <the n8n webhook secret>`
+   - Request Body (JSON): key `title`, value = the **Dictated Text** variable
 
-Now say **"Hey Siri, Capture"** from iPhone, Apple Watch, or CarPlay to send tasks straight to your inbox.
+The secret lives only in the Shortcut definition, which syncs to Watch and
+CarPlay through the iCloud keychain. It is never committed here. It must match
+the Value on the `GSD Capture Webhook Token` credential in n8n — see
+[n8n Credentials](#n8n-credentials).
 
-**Tip:** Keep the shortcut name to a single word ("Capture") for reliable Siri/Watch/CarPlay recognition. Multi-word names can be unreliable on watchOS.
+### Do not use a LAN address
 
-You can also capture directly via the API:
+Earlier versions pointed at `http://192.168.50.122:5678/webhook/capture`. That is
+a private address, meaningful only inside the home network, and that host is now
+gone entirely — so it failed everywhere, not just when away. Always use the
+public hostname: it works identically on and off the LAN, and needs no DNS
+tricks or VPN.
+
+### Failures are visible, not silent
+
+The n8n webhook uses **When Last Node Finishes** as its Response Mode, so it
+waits for the API write and returns the real result. With the older
+`onReceived` setting the webhook acknowledged the request before the API call
+ran, so a capture could report success and create nothing — which is exactly what
+happened while token auth was being wired up. Keep it on last-node so a failed
+capture surfaces an error on the device.
+
+There is still no offline queue: if the server is unreachable the capture fails
+and is lost rather than being retried later. See DECISIONS.md — this is deferred
+to the planned native iOS app.
+
+### Other ways to capture
+
 ```bash
-curl -X POST http://localhost:8000/next-actions \
+# Direct to the API (requires the API token, not the webhook token)
+curl -X POST http://gsd.home.lab/api/next-actions \
   -H "Content-Type: application/json" \
   -d '{"title": "Your task here"}'
 ```
 
-Or use the **+ Capture** button at the top of the Intake page in the UI.
+Or the **+ Capture** button on the Intake page in the UI.
 
 ## n8n Workflows
 
