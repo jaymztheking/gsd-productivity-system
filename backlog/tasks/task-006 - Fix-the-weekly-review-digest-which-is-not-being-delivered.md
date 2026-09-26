@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-26 03:55'
-updated_date: '2026-09-26 16:12'
+updated_date: '2026-09-26 16:22'
 labels:
   - n8n
   - digest
@@ -44,13 +44,13 @@ One hardcoded-configuration issue found earlier still stands and is worth fixing
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The reason scheduled runs do not fire is identified from the n8n execution history and the trigger configuration, distinguishing a trigger that never fires from one that fires at an unexpected time
-- [ ] #2 The schedule trigger day-of-week value is corrected against the numbering used by the n8n version in use, so that it resolves to Sunday
-- [ ] #3 The timezone the schedule is evaluated in is confirmed, and 19:00 means 19:00 local rather than UTC
-- [ ] #4 The workflow is confirmed active in the live instance, and any duplicate copies created by re-import are removed
-- [ ] #5 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
+- [x] #1 The reason scheduled runs do not fire is identified from the n8n execution history and the trigger configuration, distinguishing a trigger that never fires from one that fires at an unexpected time
+- [x] #2 The schedule trigger day-of-week value is corrected against the numbering used by the n8n version in use, so that it resolves to Sunday
+- [x] #3 The timezone the schedule is evaluated in is confirmed, and 19:00 means 19:00 local rather than UTC
+- [x] #4 The workflow is confirmed active in the live instance, and any duplicate copies created by re-import are removed
+- [x] #5 A scheduled run is confirmed delivered without manual intervention, observed on the next scheduled occurrence or by temporarily setting the schedule to a near-future time
 - [ ] #6 The digest email renders legibly in a mail client, with empty sections handled gracefully rather than shown as broken or blank blocks
-- [ ] #7 Sender and recipient are set in one obvious place (a Digest Settings node in the workflow) rather than hardcoded in the email node, and the unused SMTP_*/DIGEST_RECIPIENT entries are removed from `.env.example` (user decision 2026-09-26: no $env, since n8n 2.x blocks env access in expressions and the live n8n deployment is outside this repo)
+- [x] #7 Sender and recipient are set in one obvious place (a Digest Settings node in the workflow) rather than hardcoded in the email node, and the unused SMTP_*/DIGEST_RECIPIENT entries are removed from `.env.example` (user decision 2026-09-26: no $env, since n8n 2.x blocks env access in expressions and the live n8n deployment is outside this repo)
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -76,4 +76,8 @@ Timezone: the n8n pod has no GENERIC_TIMEZONE (date = UTC). Fixed per workflow v
 Duplicates: the 5 extra digest copies and the duplicate inactive Inbox Capture (Hdqh83gHkUkfs_QQj5jKM) were already isArchived = true when re-exported. wayvHwteu1n9IPRk is the only live digest.
 Live update: the repo workflow was imported over wayvHwteu1n9IPRk, keeping its live credential ids (GSD API Token oYF4SIR6WgX2VZQd, SMTP account ygBtEFn5e291oEMk), because the repo JSON links credentials only by name and the email node's credentials are empty in the repo. The CLI publish:workflow only takes effect after an n8n restart, so it was published from the UI instead, which applies immediately without interrupting the capture webhook. Import resets the workflow to unpublished.
 Repo committed f0a1d72.
+
+SCHEDULED RUN VERIFIED 2026-09-26: the trigger was temporarily set to Saturday 10:19 America/Denver and published from the UI. Execution #79 started by itself at Sep 26 10:19:17 local (16:19 UTC), in trigger mode (no manual-test marker), status Succeeded in 2.04s. The api log shows the four GETs returning 200 from the n8n pod (10.42.2.175), and Send Digest Email got SMTP response '250 2.0.0 OK ... gsmtp'. Firing at the exact local minute confirms the workflow timezone is honored (AC3). The execution list for this workflow shows only that run and one earlier manual test (Sep 25 23:23), consistent with the schedule never having fired before (AC1).
+RESTORED: re-imported the Sunday version and published it from the UI as 'TASK-006 Sunday 19:00 America/Denver'. CLI export confirms active=true, activeVersionId=versionId=4b7c61e0, trigger {field: weeks, triggerAtDay: [0], triggerAtHour: 19, triggerAtMinute: 0}, timezone America/Denver, both credentials linked. First real run: Sunday 2026-09-27 19:00 MT.
+AC6 (rendering) is waiting on the user to look at the 10:19 test email in Gmail.
 <!-- SECTION:NOTES:END -->
