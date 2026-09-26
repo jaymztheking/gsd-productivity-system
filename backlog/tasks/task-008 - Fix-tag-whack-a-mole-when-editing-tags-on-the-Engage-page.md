@@ -1,9 +1,11 @@
 ---
 id: TASK-008
 title: Fix tag whack-a-mole when editing tags on the Engage page
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-26 14:17'
+updated_date: '2026-09-26 15:28'
 labels:
   - ui
   - bug
@@ -36,3 +38,12 @@ The API update replaces the whole tag set whenever `tag_ids` is sent (api/app/cr
 - [ ] #6 Root cause is recorded in the implementation notes
 - [ ] #7 A regression test (UI or API, whichever layer holds the bug) covers the reported scenario
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Root cause (API): update_next_action runs a raw DELETE on next_action_tags, then assigns action.tags. The ORM collection still holds the pre-delete tags, so SQLAlchemy only INSERTs tags that are new; tags kept across the edit are deleted and never re-inserted. Fix: drop the raw DELETE and let the relationship assignment compute the diff (the collection is always eager-loaded via get_next_action/selectin).
+2. Add an API regression test that runs update_next_action against a real DB session (SQLite in-memory via aiosqlite if the models allow it, else Postgres) covering: kept tag survives while others added (reported case), explicit removal, empty list clears, repeated edits.
+3. UI hardening for AC4: TaskCard seeds editor state once on mount; re-seed title/notes/tags/project/status from the action prop whenever the editor is opened, so the editor always matches the badges.
+4. Verify: run the new test (fails before fix, passes after), tsc build of the UI, and a manual check against the running app if available.
+<!-- SECTION:PLAN:END -->
