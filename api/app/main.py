@@ -1,22 +1,29 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth import require_token
+from app.config import settings
 from app.routers import next_actions, projects, tags
 
 app = FastAPI(title="GSD API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allow_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(tags.router, tags=["tags"])
-app.include_router(projects.router, tags=["projects"])
-app.include_router(next_actions.router, tags=["next-actions"])
+# The token guard is attached per router rather than per route: projects
+# alone exposes 12 endpoints, and adding it 17 times invites missing one.
+auth = [Depends(require_token)]
+
+app.include_router(tags.router, tags=["tags"], dependencies=auth)
+app.include_router(projects.router, tags=["projects"], dependencies=auth)
+app.include_router(next_actions.router, tags=["next-actions"], dependencies=auth)
 
 
 @app.get("/health")
 async def health():
+    """Unauthenticated on purpose — the k8s probes call it. Exposes no data."""
     return {"status": "ok"}

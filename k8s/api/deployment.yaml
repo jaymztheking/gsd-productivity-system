@@ -36,6 +36,11 @@ spec:
                 secretKeyRef:
                   name: gsd-secrets
                   key: DATABASE_URL
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gsd-secrets
+                  key: API_TOKEN
             - name: PYTHONPATH
               value: /app
           readinessProbe:

@@ -20,6 +20,14 @@ spec:
           image: jaymztheking/gsd-ui:latest
           ports:
             - containerPort: 3000
+          env:
+            # Rendered into the nginx config at startup by envsubst so the
+            # proxy can attach the token server-side. Never reaches the browser.
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gsd-secrets
+                  key: API_TOKEN
           readinessProbe:
             httpGet:
               path: /

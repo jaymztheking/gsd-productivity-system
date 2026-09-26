@@ -22,11 +22,17 @@ Siri / Apple Watch ──> iOS Shortcut ──> n8n webhook ──> API ──> 
 # Clone and start
 git clone <repo-url> && cd gsd-productivity-system
 cp .env.example .env  # Edit as needed (ports, credentials)
+
+# Generate the shared API token and set it in .env
+openssl rand -hex 32
+# Paste the SAME value into both API_TOKEN and GSD_API_TOKEN in .env
+
 docker compose up --build -d
 
 # Verify
-curl http://localhost:8000/health        # API
-curl http://localhost:8000/tags          # Seed tags
+curl http://localhost:8000/health        # API — open, no token needed
+curl http://localhost:8000/tags          # 401: data endpoints require the token
+curl -H "X-API-Token: $API_TOKEN" http://localhost:8000/tags   # Seed tags
 open http://localhost:3000               # UI (redirects to /engage)
 open http://localhost:3000/intake        # Intake UI
 open http://localhost:3000/projects      # Projects UI
@@ -40,6 +46,96 @@ Default ports (configurable via `.env`):
 | API      | 8000 |
 | UI       | 3000 |
 | n8n      | 5678 |
+
+## API Authentication
+
+Every endpoint that reads or writes data requires a shared secret in the
+`X-API-Token` header. `/health` is deliberately exempt so Kubernetes probes keep
+working; it returns nothing but `{"status": "ok"}`.
+
+A header was chosen over an interactive login because the primary client is an
+iOS Shortcut, which can set arbitrary headers but cannot complete a login form.
+The token is compared with `secrets.compare_digest`, and a missing token is
+indistinguishable from a wrong one so the response reveals nothing.
+
+`API_TOKEN` has no default. The API fails to start if it is unset, rather than
+silently coming up unprotected.
+
+### The browser never receives the token
+
+The UI calls the API as same-origin relative paths (`/api/*`), and the proxy in
+front of it attaches the token server-side — `ui/nginx.conf.template` in
+production, `ui/vite.config.ts` in development. No frontend code holds the
+secret, because anything shipped to the browser is readable by whoever loads the
+page. Cloudflare Access authenticates the person; it does not hide the
+JavaScript.
+
+```
+browser ──/api/*──> nginx ──X-API-Token: ···──> api:8000
+                  (secret injected here, from env)
+```
+
+Because nothing is cross-origin, `CORS_ALLOW_ORIGINS` is normally empty. Set it
+only if some other browser origin must call the API directly.
+
+### Where the token lives
+
+| Component | Source | Notes |
+|---|---|---|
+| API | `API_TOKEN` env | From `gsd-secrets` in k3s |
+| UI proxy | `API_TOKEN` env | Rendered into nginx config by envsubst at startup |
+| n8n workflows | `GSD_API_TOKEN` env | Referenced as `{{ $env.GSD_API_TOKEN }}` |
+| iOS Shortcut | Shortcut definition | Stored in the iCloud keychain |
+
+Local values live in `.env`; cluster values live in `k8s/secrets.yaml`. Both are
+gitignored. Only placeholders are ever committed.
+
+### Capture webhook secret
+
+The n8n capture webhook uses header auth, so the publicly reachable endpoint
+cannot be written to anonymously. The credential is created in the n8n UI
+(**Credentials → Header Auth**, named `GSD Capture Webhook Token`) and is
+referenced by name from `inbox-capture.json` rather than embedded in it, so the
+workflow can be committed safely. This is separate from `API_TOKEN`: the webhook
+secret guards n8n's front door, `API_TOKEN` guards the API behind it.
+
+### Rotating the token
+
+The token is shared, so every holder must change together or captures start
+failing. Rotate in this order:
+
+```bash
+NEW=$(openssl rand -hex 32)
+```
+
+1. **k3s** — update `API_TOKEN` in `k8s/secrets.yaml`, apply it, then restart
+   both deployments so they pick it up:
+   `kubectl -n gsd rollout restart deploy/api deploy/ui`
+2. **n8n** — update `GSD_API_TOKEN` in the n8n environment and restart it. Both
+   workflows read it from there, so neither workflow JSON needs editing.
+3. **iOS Shortcut** — update the `X-API-Token` header value in the Capture
+   shortcut on one device; iCloud syncs it to Watch and CarPlay.
+4. **Local dev** — update `API_TOKEN` and `GSD_API_TOKEN` in `.env`, then
+   `docker compose up -d` to recreate the containers.
+
+Verify afterwards that a capture from the Shortcut still lands in the inbox, and
+that the UI still loads data. Rotating the webhook secret is a separate
+operation: change it in the n8n credential and in the Shortcut's header.
+
+## Running Tests
+
+```bash
+pip install -r api/requirements.txt          # includes pytest and httpx
+PYTHONPATH=api pytest api/tests/test_auth.py -v
+```
+
+`test_auth.py` needs no database or running services — it stubs the session and
+the crud calls to exercise the auth layer alone. `test_digest_pipeline.py` is an
+integration suite and does need a live API:
+
+```bash
+API_URL=http://localhost:8000 PYTHONPATH=api pytest api/tests/test_digest_pipeline.py -v
+```
 
 ## Swapping Postgres to Cloud
 

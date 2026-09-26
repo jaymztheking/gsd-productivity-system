@@ -7,13 +7,22 @@
         "httpMethod": "POST",
         "path": "capture",
         "responseMode": "onReceived",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "webhook-capture",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "GSD Capture Webhook Token"
+        }
+      }
     },
     {
       "parameters": {
@@ -28,13 +37,26 @@
               "fullResponse": false
             }
           }
+        },
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Token",
+              "value": "={{ $env.GSD_API_TOKEN }}"
+            }
+          ]
         }
       },
       "id": "create-inbox-item",
       "name": "Create Inbox Item",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 300]
+      "position": [
+        480,
+        300
+      ]
     }
   ],
   "connections": {

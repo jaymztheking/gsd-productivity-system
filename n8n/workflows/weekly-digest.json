@@ -17,69 +17,127 @@
       "name": "Weekly Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [250, 300]
+      "position": [
+        250,
+        300
+      ]
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=inbox",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Token",
+              "value": "={{ $env.GSD_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "id": "fetch-inbox",
       "name": "Fetch Inbox Items",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 160],
+      "position": [
+        480,
+        160
+      ],
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=active",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Token",
+              "value": "={{ $env.GSD_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "id": "fetch-active",
       "name": "Fetch Active Items",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 300],
+      "position": [
+        480,
+        300
+      ],
       "alwaysOutputData": true,
       "executeOnce": true
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/next-actions?status=pending",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Token",
+              "value": "={{ $env.GSD_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "id": "fetch-pending",
       "name": "Fetch Pending Items",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 440],
+      "position": [
+        480,
+        440
+      ],
       "alwaysOutputData": true,
       "executeOnce": true
     },
     {
       "parameters": {
         "url": "http://api.gsd.svc.cluster.local:8000/projects?status=active",
-        "options": {}
+        "options": {},
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Token",
+              "value": "={{ $env.GSD_API_TOKEN }}"
+            }
+          ]
+        }
       },
       "id": "fetch-projects",
       "name": "Fetch Active Projects",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 580],
+      "position": [
+        480,
+        580
+      ],
       "alwaysOutputData": true,
       "executeOnce": true
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Flatten helper: HTTP Request may return whole array as one item or split items\nfunction flatten(nodeName) {\n  const items = $(nodeName).all().map(i => i.json);\n  if (items.length === 1 && Array.isArray(items[0])) return items[0];\n  return items.filter(i => i && Object.keys(i).length > 0);\n}\n\nconst inbox = flatten('Fetch Inbox Items');\nconst active = flatten('Fetch Active Items');\nconst pending = flatten('Fetch Pending Items');\nconst projects = flatten('Fetch Active Projects');\n\nconst now = new Date();\nconst weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);\nconst dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n\nfunction section(title, count, color, content, action) {\n  return `\n    <div style=\"margin-bottom:24px;\">\n      <div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;\">\n        <div style=\"width:4px;height:20px;background:${color};border-radius:2px;\"></div>\n        <h2 style=\"margin:0;font-size:16px;font-weight:600;color:#1a1a1a;\">${title}</h2>\n        <span style=\"background:${color}22;color:${color};font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;\">${count}</span>\n      </div>\n      ${content}\n      ${action ? `<p style=\"margin:8px 0 0;font-size:13px;color:#666;\"><strong>Action:</strong> ${action}</p>` : ''}\n    </div>`;\n}\n\nfunction itemList(items, renderFn) {\n  if (!items.length) return '<p style=\"color:#888;font-size:14px;margin:0;\">None</p>';\n  return '<ul style=\"margin:0;padding-left:20px;\">' +\n    items.map(i => `<li style=\"font-size:14px;color:#333;margin-bottom:4px;\">${renderFn(i)}</li>`).join('') +\n    '</ul>';\n}\n\nconst inboxSection = section(\n  'Inbox', inbox.length, '#f59e0b',\n  inbox.length\n    ? itemList(inbox, i => i.title)\n    : '<p style=\"color:#888;font-size:14px;margin:0;\">Inbox zero!</p>',\n  inbox.length ? 'Process these in the Intake UI.' : null\n);\n\nconst activeSection = section(\n  'Active Actions', active.length, '#3b82f6',\n  itemList(active, i => {\n    const isStale = new Date(i.updated_at) < weekAgo;\n    const tags = Array.isArray(i.tags) ? i.tags.map(t => `<span style=\"background:#f3f4f6;color:#555;font-size:11px;padding:1px 6px;border-radius:4px;margin-left:4px;\">${t.name}</span>`).join('') : '';\n    const staleFlag = isStale ? '<span style=\"color:#ef4444;font-size:11px;font-weight:600;margin-left:6px;\">STALE</span>' : '';\n    return `${i.title}${tags}${staleFlag}`;\n  }),\n  null\n);\n\nconst pendingSection = section(\n  'Pending / Waiting For', pending.length, '#8b5cf6',\n  itemList(pending, i => i.title),\n  pending.length ? 'Follow up on these.' : null\n);\n\nconst somedayItems = active.filter(a =>\n  Array.isArray(a.tags) && a.tags.some(t => t.name === '#someday')\n);\nconst somedaySection = section(\n  'Someday / Maybe', somedayItems.length, '#6b7280',\n  itemList(somedayItems, i => i.title),\n  somedayItems.length ? 'Scan this list. Promote or delete.' : null\n);\n\nconst projectsSection = section(\n  'Active Projects', projects.length, '#10b981',\n  itemList(projects, p => {\n    const hasActions = active.some(a => a.project_id === p.id);\n    return hasActions ? p.name : `${p.name} <span style=\"color:#ef4444;font-weight:600;font-size:12px;\">NO NEXT ACTION</span>`;\n  }),\n  null\n);\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body style=\"margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\">\n  <div style=\"max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);\">\n    <div style=\"background:#1a1a2e;padding:28px 32px;\">\n      <h1 style=\"margin:0;color:#fff;font-size:22px;font-weight:700;\">GSD Weekly Review</h1>\n      <p style=\"margin:4px 0 0;color:#9ca3af;font-size:14px;\">${dateStr}</p>\n    </div>\n    <div style=\"padding:28px 32px;\">\n      ${inboxSection}\n      ${activeSection}\n      ${pendingSection}\n      ${somedaySection}\n      ${projectsSection}\n    </div>\n    <div style=\"padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;\">\n      <p style=\"margin:0;font-size:12px;color:#9ca3af;\">GSD Productivity System &mdash; Weekly Digest</p>\n    </div>\n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { subject: `GSD Weekly Review — ${dateStr}`, html } }];"
+        "jsCode": "// Flatten helper: HTTP Request may return whole array as one item or split items\nfunction flatten(nodeName) {\n  const items = $(nodeName).all().map(i => i.json);\n  if (items.length === 1 && Array.isArray(items[0])) return items[0];\n  return items.filter(i => i && Object.keys(i).length > 0);\n}\n\nconst inbox = flatten('Fetch Inbox Items');\nconst active = flatten('Fetch Active Items');\nconst pending = flatten('Fetch Pending Items');\nconst projects = flatten('Fetch Active Projects');\n\nconst now = new Date();\nconst weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);\nconst dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n\nfunction section(title, count, color, content, action) {\n  return `\n    <div style=\"margin-bottom:24px;\">\n      <div style=\"display:flex;align-items:center;gap:8px;margin-bottom:8px;\">\n        <div style=\"width:4px;height:20px;background:${color};border-radius:2px;\"></div>\n        <h2 style=\"margin:0;font-size:16px;font-weight:600;color:#1a1a1a;\">${title}</h2>\n        <span style=\"background:${color}22;color:${color};font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;\">${count}</span>\n      </div>\n      ${content}\n      ${action ? `<p style=\"margin:8px 0 0;font-size:13px;color:#666;\"><strong>Action:</strong> ${action}</p>` : ''}\n    </div>`;\n}\n\nfunction itemList(items, renderFn) {\n  if (!items.length) return '<p style=\"color:#888;font-size:14px;margin:0;\">None</p>';\n  return '<ul style=\"margin:0;padding-left:20px;\">' +\n    items.map(i => `<li style=\"font-size:14px;color:#333;margin-bottom:4px;\">${renderFn(i)}</li>`).join('') +\n    '</ul>';\n}\n\nconst inboxSection = section(\n  'Inbox', inbox.length, '#f59e0b',\n  inbox.length\n    ? itemList(inbox, i => i.title)\n    : '<p style=\"color:#888;font-size:14px;margin:0;\">Inbox zero!</p>',\n  inbox.length ? 'Process these in the Intake UI.' : null\n);\n\nconst activeSection = section(\n  'Active Actions', active.length, '#3b82f6',\n  itemList(active, i => {\n    const isStale = new Date(i.updated_at) < weekAgo;\n    const tags = Array.isArray(i.tags) ? i.tags.map(t => `<span style=\"background:#f3f4f6;color:#555;font-size:11px;padding:1px 6px;border-radius:4px;margin-left:4px;\">${t.name}</span>`).join('') : '';\n    const staleFlag = isStale ? '<span style=\"color:#ef4444;font-size:11px;font-weight:600;margin-left:6px;\">STALE</span>' : '';\n    return `${i.title}${tags}${staleFlag}`;\n  }),\n  null\n);\n\nconst pendingSection = section(\n  'Pending / Waiting For', pending.length, '#8b5cf6',\n  itemList(pending, i => i.title),\n  pending.length ? 'Follow up on these.' : null\n);\n\nconst somedayItems = active.filter(a =>\n  Array.isArray(a.tags) && a.tags.some(t => t.name === '#someday')\n);\nconst somedaySection = section(\n  'Someday / Maybe', somedayItems.length, '#6b7280',\n  itemList(somedayItems, i => i.title),\n  somedayItems.length ? 'Scan this list. Promote or delete.' : null\n);\n\nconst projectsSection = section(\n  'Active Projects', projects.length, '#10b981',\n  itemList(projects, p => {\n    const hasActions = active.some(a => a.project_id === p.id);\n    return hasActions ? p.name : `${p.name} <span style=\"color:#ef4444;font-weight:600;font-size:12px;\">NO NEXT ACTION</span>`;\n  }),\n  null\n);\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body style=\"margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\">\n  <div style=\"max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);\">\n    <div style=\"background:#1a1a2e;padding:28px 32px;\">\n      <h1 style=\"margin:0;color:#fff;font-size:22px;font-weight:700;\">GSD Weekly Review</h1>\n      <p style=\"margin:4px 0 0;color:#9ca3af;font-size:14px;\">${dateStr}</p>\n    </div>\n    <div style=\"padding:28px 32px;\">\n      ${inboxSection}\n      ${activeSection}\n      ${pendingSection}\n      ${somedaySection}\n      ${projectsSection}\n    </div>\n    <div style=\"padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;\">\n      <p style=\"margin:0;font-size:12px;color:#9ca3af;\">GSD Productivity System &mdash; Weekly Digest</p>\n    </div>\n  </div>\n</body>\n</html>`;\n\nreturn [{ json: { subject: `GSD Weekly Review \u2014 ${dateStr}`, html } }];"
       },
       "id": "compile-digest",
       "name": "Compile Digest",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [740, 370]
+      "position": [
+        740,
+        370
+      ]
     },
     {
       "parameters": {
@@ -93,39 +151,78 @@
       "name": "Send Digest Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [960, 370],
+      "position": [
+        960,
+        370
+      ],
       "credentials": {}
     }
   ],
   "connections": {
     "Weekly Trigger": {
       "main": [
-        [{ "node": "Fetch Inbox Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Inbox Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Inbox Items": {
       "main": [
-        [{ "node": "Fetch Active Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Active Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Active Items": {
       "main": [
-        [{ "node": "Fetch Pending Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Pending Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Pending Items": {
       "main": [
-        [{ "node": "Fetch Active Projects", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Active Projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Active Projects": {
       "main": [
-        [{ "node": "Compile Digest", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Compile Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Compile Digest": {
       "main": [
-        [{ "node": "Send Digest Email", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send Digest Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

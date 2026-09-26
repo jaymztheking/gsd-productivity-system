@@ -21,6 +21,8 @@ services:
       - "${API_PORT:-8000}:8000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      API_TOKEN: ${API_TOKEN}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-}
       PYTHONPATH: /app
     depends_on:
       postgres:
@@ -38,6 +40,8 @@ services:
       - "${UI_PORT:-3000}:3000"
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+      # Injected into proxied requests by vite.config.ts, never shipped to the browser
+      API_TOKEN: ${API_TOKEN}
     depends_on:
       - api
     volumes:
@@ -53,6 +57,8 @@ services:
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://n8n:5678}
+      # Referenced by both workflows as $$env.GSD_API_TOKEN
+      - GSD_API_TOKEN=${GSD_API_TOKEN}
     volumes:
       - n8n_data:/home/node/.n8n
       - ./n8n/workflows:/workflows
