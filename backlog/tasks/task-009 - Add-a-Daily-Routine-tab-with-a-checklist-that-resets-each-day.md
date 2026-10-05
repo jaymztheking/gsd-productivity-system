@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-05 03:28'
-updated_date: '2026-10-05 03:36'
+updated_date: '2026-10-05 03:49'
 labels:
   - ui
   - api
@@ -34,20 +34,20 @@ A single every-day list is too rigid: the user wants a Monday routine, a Tuesday
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A "Routine" tab appears in the main navigation alongside Engage, Intake and Projects and opens a page showing today's routine checklist
-- [ ] #2 Routine items are stored server-side via the API and database, so the list and today's check state are the same across devices and survive page reloads and container restarts
-- [ ] #3 The user can add, rename, reorder and delete routine items from the Routine page
-- [ ] #4 Each routine item is scheduled on one or more days of the week (any combination of Monday through Sunday), chosen when the item is created and changeable later
-- [ ] #5 Today's checklist shows only the items scheduled for the current local weekday, and the user can view and edit items scheduled for other weekdays without switching the device date
-- [ ] #6 Routine items are persistent: checking one off never deletes, archives or completes it as a task, and items do not show up in Engage, Intake, Projects or the weekly digest
-- [ ] #7 The user can check and uncheck items any number of times during the day, and checked items are visually crossed off
-- [ ] #8 At the start of each new local day (America/Denver), the checklist switches to that weekday's items, all unchecked, without any user action
-- [ ] #9 The daily reset is correct even if no service was running at midnight or the page was left open across midnight (e.g. opening the app the next morning, or the next week, shows a fresh checklist)
-- [ ] #10 Editing the list (add/rename/reorder/delete/reschedule) does not reset the check state of other items for the current day
-- [ ] #11 Completion history is retained per item per local date after the reset, and an API endpoint returns, for a requested date range, each item's completed dates, its weekday schedule and the date it was created
-- [ ] #12 Deleting a routine item removes it from the checklist but keeps its past completion history available to the history endpoint
-- [ ] #13 API tests cover item CRUD, weekday scheduling, toggling check state, history retrieval, and the day-boundary reset including a Denver-vs-UTC boundary case
-- [ ] #14 Routine endpoints are protected by the same API token auth as the rest of the API
+- [x] #1 A "Routine" tab appears in the main navigation alongside Engage, Intake and Projects and opens a page showing today's routine checklist
+- [x] #2 Routine items are stored server-side via the API and database, so the list and today's check state are the same across devices and survive page reloads and container restarts
+- [x] #3 The user can add, rename, reorder and delete routine items from the Routine page
+- [x] #4 Each routine item is scheduled on one or more days of the week (any combination of Monday through Sunday), chosen when the item is created and changeable later
+- [x] #5 Today's checklist shows only the items scheduled for the current local weekday, and the user can view and edit items scheduled for other weekdays without switching the device date
+- [x] #6 Routine items are persistent: checking one off never deletes, archives or completes it as a task, and items do not show up in Engage, Intake, Projects or the weekly digest
+- [x] #7 The user can check and uncheck items any number of times during the day, and checked items are visually crossed off
+- [x] #8 At the start of each new local day (America/Denver), the checklist switches to that weekday's items, all unchecked, without any user action
+- [x] #9 The daily reset is correct even if no service was running at midnight or the page was left open across midnight (e.g. opening the app the next morning, or the next week, shows a fresh checklist)
+- [x] #10 Editing the list (add/rename/reorder/delete/reschedule) does not reset the check state of other items for the current day
+- [x] #11 Completion history is retained per item per local date after the reset, and an API endpoint returns, for a requested date range, each item's completed dates, its weekday schedule and the date it was created
+- [x] #12 Deleting a routine item removes it from the checklist but keeps its past completion history available to the history endpoint
+- [x] #13 API tests cover item CRUD, weekday scheduling, toggling check state, history retrieval, and the day-boundary reset including a Denver-vs-UTC boundary case
+- [x] #14 Routine endpoints are protected by the same API token auth as the rest of the API
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -60,3 +60,17 @@ A single every-day list is too rigid: the user wants a Monday routine, a Tuesday
 5. UI: Routine nav tab and /routine page with Today (checklist, crossed-off ticks, optimistic toggle) and Edit (weekday filter, add/rename/reschedule/delete, up/down reorder) views. Refetch at next_reset_at, on tab refocus, and on a 409. Tighten the nav so four tabs fit at phone width.
 6. Update FILE-GLOSSARY / LOG docs; verify build, tests, and the page in a browser.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented per plan. Decisions: daily reset is implicit (completions keyed by local date in USER_TIMEZONE, default America/Denver), so nothing runs at midnight and history is never overwritten. Weekdays stored as a 7-bit mask (0=Mon..6=Sun), exposed as a list. Reorder accepts a subset (one weekday view) and keeps other items' slots. Completion PUT carries the client's date and returns 409 if it is not local today, so a page left open across midnight reloads instead of ticking the wrong day; ticking an unscheduled item is 422, unticking is always allowed. Deleted items are soft-deleted and still returned by /routine/history when they have completions in range. Items are a separate table, so they cannot leak into Engage/Intake/Projects or the digest (which reads /next-actions and /projects only). Added tzdata (slim image and Windows have no tz database).
+
+Validation: api/tests/test_routine.py 39 tests pass (CRUD, validation, weekday filtering, tick/untick, stale-date 409, edits keep ticks, next-day/next-week reset, Denver-vs-UTC midnight boundary, DST next_reset_at, history incl. deleted items and range limits, 401 on all 8 routine endpoints); test_auth + test_next_action_tags still pass (55 total). test_digest_pipeline needs a live API and was not run. UI: vite build OK, app tsc clean. Browser check on local API (SQLite) + Vite: tab in nav, ticking crosses off and persists server-side, add/rename/reschedule/reorder/two-step delete work, ticks survive edits, no horizontal scroll at 375px and 320px. API restart: ticks persisted. Migration 006 rendered offline for Postgres (alembic --sql) but not applied to a live Postgres; Docker was not running.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a Routine tab: a standing checklist of items scheduled on chosen weekdays that can be ticked off during the day and comes back unticked at local (America/Denver) midnight. Backed by new routine_items/routine_completions tables (migration 006) and a token-protected /routine API; completions are kept per local date, with a history endpoint ready for the TASK-010 heatmap. Verified with 39 new API tests (including Denver-vs-UTC and DST boundaries), a production build, and a browser walkthrough of the Today and Edit views at desktop and phone widths.
+<!-- SECTION:FINAL_SUMMARY:END -->
