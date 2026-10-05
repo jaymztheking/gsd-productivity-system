@@ -30,6 +30,14 @@ export default function Layout() {
           >
             Projects
           </NavLink>
+          <NavLink
+            to="/routine"
+            className={({ isActive }) =>
+              `nav-tab ${isActive ? "nav-tab--active" : ""}`
+            }
+          >
+            Routine
+          </NavLink>
         </div>
       </nav>
       <main className="main-content">

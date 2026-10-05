@@ -41,7 +41,7 @@ Every file in the project, organized by component and function.
 | `.dockerignore` | Excludes `__pycache__`, `.env`, `.git` from Docker build context. |
 | `pyproject.toml` | Project metadata and dependency declaration (used by pip for editable installs). |
 | `requirements.txt` | Pinned dependency list for `pip install` inside Docker. Mirrors `pyproject.toml` deps. |
-| `app/config.py` | Pydantic Settings class. Reads `DATABASE_URL` from env. Exposes `SYNC_DATABASE_URL` property that swaps `asyncpg` for `psycopg2` (needed by Alembic's synchronous migration runner). |
+| `app/config.py` | Pydantic Settings class. Reads `DATABASE_URL`, `API_TOKEN`, `CORS_ALLOW_ORIGINS` and `USER_TIMEZONE` (default `America/Denver`, defines the routine's local day) from env. Exposes `SYNC_DATABASE_URL` property that swaps `asyncpg` for `psycopg2` (needed by Alembic's synchronous migration runner). |
 
 ### Database / Migrations
 
@@ -52,6 +52,7 @@ Every file in the project, organized by component and function.
 | `alembic/script.py.mako` | Template for auto-generated migration files (used by `alembic revision`). |
 | `alembic/versions/001_create_tables.py` | Creates all 4 tables: `tags`, `projects`, `next_actions`, `next_action_tags`. Defines Postgres enum types (`action_status`, `project_status`, `tag_category`). Creates indexes on `status`, `project_id`, and junction table FKs. |
 | `alembic/versions/002_seed_tags.py` | Inserts the 13 seed tags (4 context, 5 time, 4 energy) using deterministic UUIDs via `uuid5` for cross-environment consistency. |
+| `alembic/versions/006_routine.py` | Creates `routine_items` (title, weekday bitmask, sort order, local `created_on`, soft delete) and `routine_completions` (item + local date, composite PK). |
 
 ### Models (ORM)
 
@@ -62,6 +63,7 @@ Every file in the project, organized by component and function.
 | `app/models/tag.py` | `Tag` ORM model: `id` (UUID PK), `name` (unique text), `category` (enum). |
 | `app/models/project.py` | `Project` ORM model: `id`, `name`, `status`, `index_notes`, timestamps. Has `next_actions` relationship. |
 | `app/models/next_action.py` | `NextAction` ORM model: `id`, `title`, `notes`, `status`, `project_id` (FK), timestamps, `completed_at`. Defines the `next_action_tags` junction table. Has `tags` and `project` relationships with `selectin` eager loading. |
+| `app/models/routine.py` | `RoutineItem` (weekday bitmask exposed as `weekdays`, `is_scheduled_on()`) and `RoutineCompletion` (one row per item per local date ticked). |
 
 ### Schemas (Pydantic)
 
@@ -71,6 +73,7 @@ Every file in the project, organized by component and function.
 | `app/schemas/tag.py` | `TagOut` response schema. |
 | `app/schemas/project.py` | `ProjectCreate`, `ProjectUpdate` request schemas. `ProjectOut` response schema. |
 | `app/schemas/next_action.py` | `NextActionCreate`, `NextActionUpdate` request schemas. `NextActionOut` response schema (includes nested `TagOut` and `ProjectOut`). |
+| `app/schemas/routine.py` | Routine request/response schemas: item create/update (weekdays 0=Mon..6=Sun, validated non-empty), `RoutineToday`, completion toggle, reorder, history. |
 
 ### CRUD (Database Queries)
 
@@ -80,6 +83,7 @@ Every file in the project, organized by component and function.
 | `app/crud/tags.py` | `list_tags()` — select all, ordered by category then name. |
 | `app/crud/projects.py` | `list_projects()`, `get_project()`, `create_project()`, `update_project()`. |
 | `app/crud/next_actions.py` | The most complex module. `list_next_actions()` implements AND-filter via `JOIN + GROUP BY + HAVING COUNT`. `create_next_action()` and `update_next_action()` handle tag association. `update_next_action()` manages `completed_at` timestamp on status transitions. |
+| `app/crud/routine.py` | Routine queries: today's scheduled items with tick state, CRUD with soft delete, subset reorder that keeps other items' slots, idempotent tick/untick, history by date range (includes deleted items with completions). |
 
 ### Routers (HTTP Endpoints)
 
@@ -89,6 +93,7 @@ Every file in the project, organized by component and function.
 | `app/routers/tags.py` | `GET /tags` — returns all tags for UI dropdowns/toggles. |
 | `app/routers/projects.py` | `GET /projects`, `POST /projects` (201), `PATCH /projects/:id`. 404 on missing project. |
 | `app/routers/next_actions.py` | `GET /next-actions` (with `status` and `tag_ids` query params), `POST /next-actions` (201), `PATCH /next-actions/:id`, `DELETE /next-actions/:id` (204). 404 on missing action. |
+| `app/routers/routine.py` | `/routine/*` endpoints (today, items CRUD, order, completion, history). Rejects ticks for a date other than local today with 409. |
 
 ### Application Entry
 
@@ -96,6 +101,7 @@ Every file in the project, organized by component and function.
 |------|---------|
 | `app/__init__.py` | Empty package init. |
 | `app/main.py` | FastAPI application factory. Configures CORS (allow all origins for single-user system). Mounts all three routers. Exposes `/health` endpoint. |
+| `app/clock.py` | The single definition of the user's local "today" (`local_today()`, `next_local_midnight()`, DST-safe) and the `get_today` dependency tests override. |
 | `app/database.py` | Creates the async SQLAlchemy engine and session factory. Exposes `get_db()` async generator for FastAPI dependency injection. |
 
 ---
@@ -144,12 +150,13 @@ Every file in the project, organized by component and function.
 | `src/hooks/useTags.ts` | Fetches all tags on mount. Returns `tags` array and `tagsByCategory` grouped record for easy rendering in selectors. |
 | `src/hooks/useProjects.ts` | Fetches projects on mount. Exposes `createProject()` for inline project creation. |
 | `src/hooks/useNextActions.ts` | Fetches next actions with optional `status` and `tag_ids` filters. Refetches when params change. Exposes `createAction`, `updateAction`, `deleteAction`, `removeFromList` for optimistic UI updates. |
+| `src/hooks/useRoutine.ts` | Loads today's checklist and all routine items. Optimistic tick with rollback; refetches at `next_reset_at`, on tab refocus, and on a 409 so the list resets at local midnight. |
 
 ### Shared Components
 
 | File | Purpose |
 |------|---------|
-| `src/components/Layout.tsx` | App shell with sticky top nav. Two `NavLink` tabs (Engage, Intake) with active state styling. Renders child routes via `<Outlet />`. |
+| `src/components/Layout.tsx` | App shell with sticky top nav. `NavLink` tabs (Engage, Intake, Projects, Routine) with active state styling. Renders child routes via `<Outlet />`. |
 | `src/components/TagBadge.tsx` | Colored pill displaying a tag name. Color determined by category (blue=context, amber=time, green=energy) via CSS custom property. |
 | `src/components/TagSelector.tsx` | Radio-style button group for selecting one tag per category. Tapping the active tag deselects it. Used in both Intake (triage) and Engage (filtering). |
 | `src/components/ProjectSelector.tsx` | Dropdown for project assignment. Lists active projects, "None" option, and "+ New Project..." which expands inline fields for name and index notes. |
@@ -168,6 +175,12 @@ Every file in the project, organized by component and function.
 | `src/pages/EngagePage.tsx` | The core product. Manages filter state (one tag per category + show-pending toggle). Fetches active actions (and optionally pending) filtered by selected tags. Handles optimistic completion (card removed immediately, rollback on API failure). |
 | `src/pages/FilterPanel.tsx` | Three rows of tag toggle buttons (context, energy, time) plus a show-pending toggle switch. Selected buttons get filled background in their category color. All taps are large (44px+). |
 | `src/pages/TaskCard.tsx` | Individual task row. Collapsed: title, tag badges, project name, notes preview, completion circle button. Pending items have amber left border and "Pending" label. Expanded (on tap): full edit form with title, notes, tag selectors, project selector, status toggle. Completion animates the card off-screen. |
+
+### Pages — Routine
+
+| File | Purpose |
+|------|---------|
+| `src/pages/RoutinePage.tsx` | Daily routine. **Today** view: checklist of items scheduled for the current weekday, crossed off when ticked, with progress bar. **Edit** view: weekday filter, add form with day picker, per-item editor (rename, reschedule, two-step delete), up/down reorder within the filtered list. |
 
 ### Styles
 
