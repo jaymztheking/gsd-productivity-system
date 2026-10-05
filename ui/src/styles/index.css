@@ -773,3 +773,190 @@ body {
   gap: 0.75rem;
   padding-top: 0.75rem;
 }
+
+/* === Routine === */
+.routine-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.segmented {
+  display: flex;
+  padding: 2px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.segmented__btn {
+  min-height: 40px;
+  padding: 0.375rem 0.875rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented__btn--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.routine-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.routine-progress__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.routine-progress__fill {
+  height: 100%;
+  background: var(--color-success);
+  transition: width 0.2s;
+}
+
+.routine-list {
+  list-style: none;
+}
+
+.routine-check {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: 0.625rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.routine-check:hover {
+  background: var(--color-surface-hover);
+}
+
+.routine-check__box {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.routine-check__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.routine-check--done .routine-check__box {
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.routine-check--done .routine-check__title {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.day-filter,
+.day-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.day-chip {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0.25rem 0.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.day-chip:hover {
+  color: var(--color-text);
+}
+
+.day-chip--on {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.routine-days {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.125rem;
+}
+
+.routine-empty-filter {
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+.routine-hint {
+  font-size: 0.8rem;
+  color: var(--color-pending);
+}
+
+.routine-editor-actions {
+  flex-wrap: wrap;
+}
+
+.routine-editor-actions__spacer {
+  flex: 1;
+}
+
+/* Four nav tabs plus the logo need tighter spacing on phones */
+@media (max-width: 480px) {
+  .nav-bar {
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  /* On the narrowest screens the tabs scroll rather than widen the page */
+  .nav-tabs {
+    gap: 0.125rem;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .nav-tab {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}

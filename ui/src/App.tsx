@@ -4,6 +4,7 @@ import EngagePage from "./pages/EngagePage";
 import IntakePage from "./pages/IntakePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
+import RoutinePage from "./pages/RoutinePage";
 import "./styles/index.css";
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
           <Route path="/intake" element={<IntakePage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/routine" element={<RoutinePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

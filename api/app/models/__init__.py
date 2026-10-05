@@ -10,3 +10,4 @@ from app.models.tag import Tag  # noqa: E402, F401
 from app.models.project import Project  # noqa: E402, F401
 from app.models.project_link import ProjectLink  # noqa: E402, F401
 from app.models.next_action import NextAction, next_action_tags  # noqa: E402, F401
+from app.models.routine import RoutineCompletion, RoutineItem  # noqa: E402, F401

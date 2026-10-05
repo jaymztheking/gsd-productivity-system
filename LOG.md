@@ -78,3 +78,11 @@ Chronological record of what was done in each implementation phase.
 - Wrote `DECISIONS.md`: rationale for FastAPI over Express, React over Svelte, single UI container, no state management library, stock Postgres image, hand-written migrations, deterministic UUIDs, naive timestamps, tags as first-class data, someday as tag not status, API proxy pattern, mobile-first design choices
 - Wrote `FILE-GLOSSARY.md`: every file described, organized by component (root, API, UI, n8n) and function (config, migration, model, schema, CRUD, router, entry, types, client, hooks, components, pages, styles, workflows)
 - Wrote `LOG.md`: this file
+
+## TASK-009: Daily Routine tab
+
+- New `routine_items` / `routine_completions` tables (migration `006_routine.py`). Items are scheduled per weekday via a 7-bit mask; a tick is a row keyed by the user's local date, so the midnight reset needs no scheduler and every past day is retained for the planned history heatmap (TASK-010)
+- `app/clock.py` defines "today" in `USER_TIMEZONE` (default `America/Denver`); added `tzdata` because neither the slim image nor Windows ships a timezone database
+- `/routine` router: today, items CRUD (soft delete), subset reorder, completion toggle (409 for a stale date so a page left open overnight cannot tick the wrong day), history by date range
+- `RoutinePage.tsx` with Today and Edit views, `useRoutine.ts` refetching at `next_reset_at` / on refocus; nav tightened so four tabs fit at phone width
+- `api/tests/test_routine.py`: 39 tests incl. Denver-vs-UTC midnight boundary and DST

@@ -5,10 +5,23 @@ import type {
   ProjectDetail,
   ProjectLink,
   ProjectStatus,
+  RoutineItem,
+  RoutineToday,
   Tag,
+  Weekday,
 } from "../types/models";
 
 const BASE = "/api";
+
+/** An API error that keeps the HTTP status, so callers can react to it. */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 async function request<T>(
   path: string,
@@ -20,7 +33,7 @@ async function request<T>(
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`API ${res.status}: ${text}`);
+    throw new ApiError(res.status, `API ${res.status}: ${text}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -179,4 +192,57 @@ export function updateNextAction(
 
 export function deleteNextAction(id: string): Promise<void> {
   return request(`/next-actions/${id}`, { method: "DELETE" });
+}
+
+// --- Routine ---
+
+export function fetchRoutineToday(): Promise<RoutineToday> {
+  return request("/routine/today");
+}
+
+export function fetchRoutineItems(): Promise<RoutineItem[]> {
+  return request("/routine/items");
+}
+
+export function createRoutineItem(data: {
+  title: string;
+  weekdays: Weekday[];
+}): Promise<RoutineItem> {
+  return request("/routine/items", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateRoutineItem(
+  id: string,
+  data: { title?: string; weekdays?: Weekday[] }
+): Promise<RoutineItem> {
+  return request(`/routine/items/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteRoutineItem(id: string): Promise<void> {
+  return request(`/routine/items/${id}`, { method: "DELETE" });
+}
+
+export function reorderRoutineItems(orderedIds: string[]): Promise<void> {
+  return request("/routine/items/order", {
+    method: "PUT",
+    body: JSON.stringify({ ordered_ids: orderedIds }),
+  });
+}
+
+/** Rejects with ApiError 409 if `date` is no longer the server's today. */
+export function setRoutineCompletion(
+  id: string,
+  date: string,
+  completed: boolean
+): Promise<void> {
+  return request(`/routine/items/${id}/completion`, {
+    method: "PUT",
+    body: JSON.stringify({ date, completed }),
+  });
 }

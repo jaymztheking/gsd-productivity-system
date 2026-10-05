@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # request is cross-origin and no origin needs allowing.
     CORS_ALLOW_ORIGINS: str = ""
 
+    # IANA timezone that defines the user's calendar day. The daily routine
+    # resets at local midnight here, not at UTC midnight. Matches the
+    # timezone the weekly digest schedule runs in.
+    USER_TIMEZONE: str = "America/Denver"
+
     @property
     def SYNC_DATABASE_URL(self) -> str:
         """Synchronous URL for Alembic migrations (swaps asyncpg for psycopg2)."""

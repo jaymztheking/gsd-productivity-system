@@ -145,12 +145,14 @@ operation: change it in the n8n credential and in the Shortcut's header.
 
 ```bash
 pip install -r api/requirements.txt          # includes pytest and httpx
-PYTHONPATH=api pytest api/tests/test_auth.py api/tests/test_next_action_tags.py -v
+PYTHONPATH=api pytest api/tests/test_auth.py api/tests/test_next_action_tags.py api/tests/test_routine.py -v
 ```
 
 `test_auth.py` needs no database or running services — it stubs the session and
 the crud calls to exercise the auth layer alone. `test_next_action_tags.py` runs
-the real crud functions against an in-memory SQLite database (via `aiosqlite`). `test_digest_pipeline.py` is an
+the real crud functions against an in-memory SQLite database (via `aiosqlite`). `test_routine.py` drives the
+routine endpoints against a SQLite file with the clock pinned, to cross local
+midnight on demand. `test_digest_pipeline.py` is an
 integration suite and does need a live API:
 
 ```bash
@@ -396,7 +398,19 @@ GET    /next-actions                         — list (filter: ?status=active&ta
 POST   /next-actions                         — create
 PATCH  /next-actions/:id                     — update
 DELETE /next-actions/:id                     — soft delete (sets deleted_at)
+
+GET    /routine/today                        — today's scheduled items with ticks, plus next_reset_at
+GET    /routine/items                        — all routine items (every weekday)
+POST   /routine/items                        — create ({title, weekdays: [0=Mon..6=Sun]})
+PATCH  /routine/items/:id                    — rename / reschedule
+DELETE /routine/items/:id                    — soft delete (history kept)
+PUT    /routine/items/order                  — reorder all items or one weekday's subset
+PUT    /routine/items/:id/completion         — tick/untick today ({date, completed}; 409 if date isn't today)
+GET    /routine/history                      — completed dates per item (?start=&end=, default last 30 days, max 366)
 ```
+
+"Today" for the routine is the user's local day in `USER_TIMEZONE` (default
+`America/Denver`), so the checklist resets at local midnight, not UTC.
 
 Tag filtering uses AND logic: `?tag_ids=a&tag_ids=b` returns only actions tagged with **both** a and b.
 
@@ -418,3 +432,5 @@ Tags within time and energy categories are ordered by intensity (ordinal data). 
 - **tags** — first-class entities with sort_order. Joined via `next_action_tags`. AND-filter logic.
 - **projects** — container for related actions. Supports 2-level hierarchy (parent → sub-projects). Status: active → complete.
 - **project_links** — URL + label pairs attached to projects (JIRA-style references).
+- **routine_items** — standing daily-routine entries scheduled on chosen weekdays (bitmask). Never completed; soft-deleted.
+- **routine_completions** — one row per item per local date ticked. The daily reset is implicit: a new day has no rows yet.
