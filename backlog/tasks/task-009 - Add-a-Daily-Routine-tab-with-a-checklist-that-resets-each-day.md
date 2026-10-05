@@ -1,11 +1,11 @@
 ---
 id: TASK-009
 title: Add a Daily Routine tab with a per-weekday checklist that resets each day
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-05 03:28'
-updated_date: '2026-10-05 03:49'
+updated_date: '2026-10-05 03:50'
 labels:
   - ui
   - api
