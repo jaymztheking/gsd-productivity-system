@@ -1,10 +1,11 @@
 ---
 id: TASK-009
 title: Add a Daily Routine tab with a per-weekday checklist that resets each day
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-05 03:28'
-updated_date: '2026-10-05 03:31'
+updated_date: '2026-10-05 03:36'
 labels:
   - ui
   - api
@@ -48,3 +49,14 @@ A single every-day list is too rigid: the user wants a Monday routine, a Tuesday
 - [ ] #13 API tests cover item CRUD, weekday scheduling, toggling check state, history retrieval, and the day-boundary reset including a Denver-vs-UTC boundary case
 - [ ] #14 Routine endpoints are protected by the same API token auth as the rest of the API
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Data model (migration 006): `routine_items` (title, weekdays as a 7-bit Mon..Sun mask, sort_order, created_on local date, deleted_at for soft delete) and `routine_completions` (item_id + completed_on local date, composite PK). A tick is a row for that local date; unticking deletes it.
+2. Daily reset is implicit, not scheduled: "today" is computed per request from USER_TIMEZONE (new setting, default America/Denver) and today's state is just completions for that date. Nothing needs to run at midnight, and history is never overwritten. Add `tzdata` so zoneinfo works in the slim image and on Windows.
+3. API router `/routine` behind the existing token auth: GET /routine/today (date, weekday, next_reset_at, scheduled items with completed flag); GET/POST /routine/items; PATCH/DELETE /routine/items/{id}; PUT /routine/items/order (reorders a subset, e.g. one weekday, keeping other items' slots); PUT /routine/items/{id}/completion {date, completed} rejecting a stale date with 409 so a page left open past midnight cannot tick into the wrong day; GET /routine/history?start&end returning per-item completed dates, weekdays, created_on and deleted_at, including deleted items.
+4. API tests against in-memory SQLite (as test_next_action_tags.py does) with an injectable clock: CRUD, weekday filtering, toggling, reorder, history incl. deleted items, Denver-vs-UTC boundary, stale-date 409, plus auth coverage for the new router.
+5. UI: Routine nav tab and /routine page with Today (checklist, crossed-off ticks, optimistic toggle) and Edit (weekday filter, add/rename/reschedule/delete, up/down reorder) views. Refetch at next_reset_at, on tab refocus, and on a 409. Tighten the nav so four tabs fit at phone width.
+6. Update FILE-GLOSSARY / LOG docs; verify build, tests, and the page in a browser.
+<!-- SECTION:PLAN:END -->
