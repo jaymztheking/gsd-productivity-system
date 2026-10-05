@@ -4,6 +4,7 @@ title: Add a routine history heatmap to the Routine tab
 status: To Do
 assignee: []
 created_date: '2026-10-05 03:31'
+updated_date: '2026-10-05 03:33'
 labels:
   - ui
   - feature
@@ -35,4 +36,5 @@ Because items run on specific weekdays (e.g. Monday-only), a day the item was no
 - [ ] #7 Deleted items with history in the selected range still appear as rows, visibly marked as removed
 - [ ] #8 Long ranges stay readable: the grid scrolls horizontally inside its container with item names pinned, and the page has no horizontal scroll at phone width
 - [ ] #9 Colours meet contrast requirements in both light and dark themes and states are distinguishable without relying on colour alone
+- [ ] #10 Scheduled vs not-scheduled is judged by each item's current weekday schedule for every date in the range; schedule changes are not tracked historically, so past days may be re-classified after a reschedule (accepted trade-off, decided 2026-10-04), but a recorded completion always shows as completed regardless of schedule
 <!-- AC:END -->
