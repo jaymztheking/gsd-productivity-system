@@ -1,10 +1,11 @@
 ---
 id: TASK-019
 title: Track the live n8n deployment manifests and retire the stale k8s/n8n copy
-status: To Do
+status: In Progress
 assignee:
   - '@James'
 created_date: '2026-10-13 02:21'
+updated_date: '2026-10-13 02:23'
 labels:
   - n8n
   - k8s
@@ -39,3 +40,22 @@ The README calls this n8n "shared", so other workloads may depend on it. Find ou
 - [ ] #5 The stale `k8s/n8n/` copy is removed or replaced, so nothing in this repo describes an n8n that does not exist
 - [ ] #6 README and FILE-GLOSSARY describe where the n8n manifests are and how to upgrade n8n by changing the pin
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Export the live n8n namespace objects (Namespace, Deployment, Service, Ingress, PVC) from the cluster and strip server-managed fields; capture Secret n8n-secrets as an example file with key names only
+2. Replace the stale k8s/n8n/ (namespace gsd, never deployed) with these manifests, keeping the exact pinned image
+3. kubectl diff -f k8s/n8n/ must show no changes; iterate until it does
+4. Update README (k3s/n8n sections), FILE-GLOSSARY, and DECISIONS.md with where n8n lives and how to upgrade by changing the pin
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Research 2026-10-12:
+- Live n8n objects (namespace n8n): Deployment n8n, Service n8n (80 -> 5678), Ingress n8n (n8n.home.lab, traefik), PVC n8n-data (1Gi local-path on cherrypi), Secret n8n-secrets (2 keys). All applied with kubectl client-side apply; Deployment later changed by kubectl set image/annotate (TASK-018) and has hand-edited env not in last-applied.
+- Never in this repo: git history has no manifests for namespace n8n. The live n8n (280d) predates this repo's k8s/ (2026-03-01); k8s/n8n/ was a GSD-local design (namespace gsd) that was never deployed.
+- Users: all 8 workflows on it are GSD (from the TASK-018 export); no other namespace or repo under ~/github references it; the only external reference is k8s/cloudflared capture route to n8n.n8n.svc.cluster.local:80. Its database lives in the separate postgres namespace (out of scope).
+- Decision (AC2, user): track the live manifests in this repo at k8s/n8n, replacing the stale copy. GSD is its only user and the tunnel route that depends on it is already here.
+<!-- SECTION:NOTES:END -->
