@@ -3,10 +3,11 @@ id: TASK-020
 title: >-
   Rotate the weak n8n Postgres password and close the .gitignore gap for
   secret.yaml
-status: To Do
+status: In Progress
 assignee:
   - '@James'
 created_date: '2026-10-13 02:30'
+updated_date: '2026-10-13 02:30'
 labels:
   - n8n
   - security
@@ -36,3 +37,11 @@ Out of scope, noted for the user: the Postgres superuser password is 6 character
 - [ ] #3 The new password value never appears in the repo, commit history, task notes, or command output
 - [ ] #4 A file named secret.yaml or secrets.yaml anywhere under k8s/ is gitignored, while the *.example templates stay tracked
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. .gitignore: replace *secrets*.yaml with *secret*.yaml, verify example files remain tracked and copies are ignored
+2. Generate a 48-char hex password in a single shell pipeline (never printed); patch n8n-secrets first, then ALTER ROLE n8n as the Postgres superuser, then immediately restart n8n so the window with mismatched credentials is seconds long. Rollback if anything fails: ALTER ROLE back and restore the secret
+3. Verify: old password rejected, new password from the Secret accepted, n8n logs activate both workflows, capture webhook returns 403 without token
+<!-- SECTION:PLAN:END -->
