@@ -65,6 +65,8 @@ Implementation 2026-10-12 (commit 88619ad):
 - Verification: kubectl diff -f k8s/n8n/ exits 0 with no output, both before and after commit. (kubectl skips secret.yaml.example since it only reads .yaml/.yml/.json.)
 - Docs: README 'Where n8n runs' under n8n Workflows (location, Postgres dependency, encryption key warning, upgrade-by-pin steps); FILE-GLOSSARY n8n section; DECISIONS 'n8n Manifests Live in This Repo'.
 - Left alone (outside AC): k8s/configmap.yaml N8N_BASIC_AUTH_USER/N8N_WEBHOOK_URL and k8s/secrets.yaml.example N8N_BASIC_AUTH_PASSWORD existed only for the stale n8n and are now unused. Removing them from the repo without also changing the live gsd-config would create drift, so raised with the user instead.
+
+Follow-up in same branch (user request): removed N8N_BASIC_AUTH_USER and N8N_WEBHOOK_URL from k8s/configmap.yaml and applied it (live gsd-config now has only POSTGRES_DB/POSTGRES_USER; kubectl diff clean; postgres, the only gsd-config consumer, unaffected). Removed N8N_BASIC_AUTH_PASSWORD from k8s/secrets.yaml.example. The live gsd-secrets still holds an unused N8N_BASIC_AUTH_PASSWORD key; left in place pending user decision, since deleting a secret value cannot be undone.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
