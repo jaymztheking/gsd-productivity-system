@@ -1,11 +1,11 @@
 ---
 id: TASK-007
 title: Restore the GSD MCP server after API token auth
-status: In Progress
+status: Done
 assignee:
   - '@James'
 created_date: '2026-09-26 05:02'
-updated_date: '2026-10-13 02:01'
+updated_date: '2026-10-13 02:06'
 labels:
   - mcp
   - auth
@@ -43,12 +43,12 @@ Worth deciding as part of this work: whether the MCP manifests and source should
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The MCP server source repository is located and recorded, along with how its image is built and pushed
-- [ ] #2 Whether the MCP server was actively serving API traffic before the break is established, so the impact is understood rather than assumed
-- [ ] #3 The MCP server sends the `X-API-Token` header on every GSD API call, with the value read from configuration rather than hardcoded
-- [ ] #4 Its deployment sources `API_TOKEN` from the existing `gsd-secrets` Secret, consistent with the api and ui deployments
-- [ ] #5 A rebuilt ARM64 image is pushed and rolled out, and the MCP server successfully reads and writes GSD data through the authenticated API
-- [ ] #6 A decision is recorded on whether the MCP manifests and source belong in this repository, so a future API change cannot silently break it again
+- [x] #1 The MCP server source repository is located and recorded, along with how its image is built and pushed
+- [x] #2 Whether the MCP server was actively serving API traffic before the break is established, so the impact is understood rather than assumed
+- [x] #3 The MCP server sends the `X-API-Token` header on every GSD API call, with the value read from configuration rather than hardcoded
+- [x] #4 Its deployment sources `API_TOKEN` from the existing `gsd-secrets` Secret, consistent with the api and ui deployments
+- [x] #5 A rebuilt ARM64 image is pushed and rolled out, and the MCP server successfully reads and writes GSD data through the authenticated API
+- [x] #6 A decision is recorded on whether the MCP manifests and source belong in this repository, so a future API change cannot silently break it again
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -78,4 +78,12 @@ Implementation (2026-10-12), commits on task-007-mcp-token-auth:
   Also: paths used an /api prefix that only exists on the ui nginx proxy (from the original gsd.home.lab URL). Dropped, since we now call api:8000 directly.
 - Verified locally: ARM64 image without API_TOKEN exits at startup (KeyError). With the token, against the live API via port-forward, a real MCP SSE client got list_tags (13), list_projects (6), and create_task worked (test task bc2de063 created then deleted, 204).
 - Blocked: pushing jaymztheking/gsd-mcp:latest to Docker Hub was denied by the auto-mode permission check (public registry). Needs user approval, then kubectl apply -f k8s/mcp/ and an in-cluster verification.
+
+Rollout (2026-10-12): user pushed jaymztheking/gsd-mcp:latest (multi-arch, manifest sha256:6b1d16a1...). kubectl apply -f k8s/mcp/ (deployment configured, service/ingress unchanged) and rollout restart; new pod runs digest 6b1d16a1. In-cluster verification from the pod itself (GSD_API_URL=http://api:8000, API_TOKEN from gsd-secrets): MCP SSE client got list_tags 13, list_projects 6, create_task succeeded (test task 9a7234ce created then deleted, 204). Zero 401s in api logs since rollout.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Restored the GSD MCP server and brought it into this repo. No source repo existed, so server.py was recovered from the running image (mcp/, committed verbatim first). The server now sends X-API-Token from API_TOKEN, which the deployment reads from gsd-secrets like api/ui; a missing token fails at startup. Also fixed three pre-existing bugs that meant it could never have worked as deployed: wrong API port (http://api to http://api:8000), an /api path prefix that only exists on the ui proxy, and a Mount-vs-Route SSE bug that hung every client handshake. Added Dockerfile, k8s/mcp manifests, and README/FILE-GLOSSARY/DECISIONS entries. Impact of the original break was nil: 28 days of logs showed only health checks. Verified by a real MCP SSE client inside the cluster doing reads (tags, projects) and a write (create_task, then cleaned up), with zero 401s on the api.
+<!-- SECTION:FINAL_SUMMARY:END -->
