@@ -1,9 +1,11 @@
 ---
 id: TASK-007
 title: Restore the GSD MCP server after API token auth
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@James'
 created_date: '2026-09-26 05:02'
+updated_date: '2026-10-13 01:55'
 labels:
   - mcp
   - auth
@@ -48,3 +50,24 @@ Worth deciding as part of this work: whether the MCP manifests and source should
 - [ ] #5 A rebuilt ARM64 image is pushed and rolled out, and the MCP server successfully reads and writes GSD data through the authenticated API
 - [ ] #6 A decision is recorded on whether the MCP manifests and source belong in this repository, so a future API change cannot silently break it again
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Recover server.py and requirements.txt from the running gsd-mcp image (no source repo exists anywhere) into mcp/ in this repo, and write a Dockerfile for it
+2. Read API_TOKEN from env and send it as X-API-Token on every request via the shared httpx client; fail fast at startup if it is unset
+3. Add k8s/mcp/ manifests (deployment, service, ingress) mirroring what is live, with GSD_API_URL=http://api:8000 and API_TOKEN from gsd-secrets, like api/ui
+4. Build the ARM64 (plus amd64, matching the existing multi-arch tag) image, push, apply, and roll out
+5. Verify end-to-end over SSE: list_tags/list_projects read, and create_task writes, through the authenticated API
+6. Update README and DECISIONS.md: where the MCP server lives, how it is built, and why it is tracked here
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Research findings (2026-10-12):
+- No source repo exists: not on GitHub (jaymztheking has only gsd-productivity-system) and not on disk. The only copy is /app/server.py + requirements.txt inside the running image (Python, mcp==1.27.0, starlette SSE transport, 5 tools: capture_to_inbox, list_tags, list_projects, create_task, create_project). Image is multi-arch (amd64 + arm64) on Docker Hub.
+- Live deployment was hand-patched after apply: last-applied has GSD_API_URL=http://gsd.home.lab, live has http://api. Also exposed via ingress gsd-mcp-ingress at mcp.gsd.home.lab (traefik, web entrypoint). Not referenced in any local Claude config.
+- Impact (AC #2): pod has 69,732 log lines since its restart 28 days ago, all GET /health. No /sse or /messages requests at all, so it served no real traffic for at least 3 weeks before TASK-003 deployed (~7 days ago). The break had no user impact.
+- Decision (user): bring source and manifests into this repo.
+<!-- SECTION:NOTES:END -->
