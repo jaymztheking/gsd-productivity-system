@@ -379,6 +379,24 @@ almost always unpublished. Importing a file also creates a new workflow rather
 than replacing the old one unless the JSON carries the existing workflow's id —
 archive stale copies so only one digest exists.
 
+**Restart n8n after changing a published schedule through the CLI.** Schedule
+triggers are timers held in memory by the running n8n process, not rows in the
+database. Publishing from the UI starts a timer, but `n8n import:workflow` runs
+as a separate process and only rewrites the database, so it never stops the old
+timer. That is how a temporary Saturday 10:19 test schedule kept sending a
+digest every week after the Sunday version was restored (TASK-018). If you test
+a schedule by editing and publishing it, restart n8n once the real schedule is
+back in place:
+
+```bash
+kubectl -n n8n rollout restart deploy/n8n
+```
+
+A restart rebuilds every timer from the published versions only. It interrupts
+the capture webhook for about a minute. The n8n image is pinned to an exact
+version (`n8nio/n8n:2.38.7@sha256:…`) so that a restart does not also upgrade
+n8n; upgrade deliberately by changing the pin.
+
 ## API Endpoints
 
 ```
