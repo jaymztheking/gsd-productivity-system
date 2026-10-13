@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@James'
 created_date: '2026-09-26 05:02'
-updated_date: '2026-10-13 01:55'
+updated_date: '2026-10-13 02:01'
 labels:
   - mcp
   - auth
@@ -70,4 +70,12 @@ Research findings (2026-10-12):
 - Live deployment was hand-patched after apply: last-applied has GSD_API_URL=http://gsd.home.lab, live has http://api. Also exposed via ingress gsd-mcp-ingress at mcp.gsd.home.lab (traefik, web entrypoint). Not referenced in any local Claude config.
 - Impact (AC #2): pod has 69,732 log lines since its restart 28 days ago, all GET /health. No /sse or /messages requests at all, so it served no real traffic for at least 3 weeks before TASK-003 deployed (~7 days ago). The break had no user impact.
 - Decision (user): bring source and manifests into this repo.
+
+Implementation (2026-10-12), commits on task-007-mcp-token-auth:
+- Found two more pre-existing bugs, both of which had to be fixed for AC #5. They mean the server could never have worked as deployed, independent of auth:
+  1. GSD_API_URL=http://api has no port, and service/api is on 8000: connections failed outright.
+  2. /sse was a Starlette Mount, so the SSE transport advertised /sse/messages/, which routed back into the SSE handler. The MCP handshake hung forever for every client. Changed to a Route per the MCP SDK pattern.
+  Also: paths used an /api prefix that only exists on the ui nginx proxy (from the original gsd.home.lab URL). Dropped, since we now call api:8000 directly.
+- Verified locally: ARM64 image without API_TOKEN exits at startup (KeyError). With the token, against the live API via port-forward, a real MCP SSE client got list_tags (13), list_projects (6), and create_task worked (test task bc2de063 created then deleted, 204).
+- Blocked: pushing jaymztheking/gsd-mcp:latest to Docker Hub was denied by the auto-mode permission check (public registry). Needs user approval, then kubectl apply -f k8s/mcp/ and an in-cluster verification.
 <!-- SECTION:NOTES:END -->
