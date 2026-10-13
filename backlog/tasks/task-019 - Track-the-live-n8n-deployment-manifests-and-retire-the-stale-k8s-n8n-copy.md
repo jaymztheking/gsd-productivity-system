@@ -1,11 +1,11 @@
 ---
 id: TASK-019
 title: Track the live n8n deployment manifests and retire the stale k8s/n8n copy
-status: In Progress
+status: Done
 assignee:
   - '@James'
 created_date: '2026-10-13 02:21'
-updated_date: '2026-10-13 02:23'
+updated_date: '2026-10-13 02:25'
 labels:
   - n8n
   - k8s
@@ -33,12 +33,12 @@ The README calls this n8n "shared", so other workloads may depend on it. Find ou
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The live n8n Deployment, Service, PVC, any ingress, and Secret references (names and keys only, never values) are captured as manifests from the cluster, including hand-edits that are not in last-applied
-- [ ] #2 A decision is recorded on where those manifests live, in this repo or elsewhere, taking into account whether anything besides GSD uses this n8n
-- [ ] #3 The tracked manifests keep the exact pinned image, so applying them never changes the n8n version
-- [ ] #4 `kubectl diff` of the tracked manifests against the live cluster shows no changes
-- [ ] #5 The stale `k8s/n8n/` copy is removed or replaced, so nothing in this repo describes an n8n that does not exist
-- [ ] #6 README and FILE-GLOSSARY describe where the n8n manifests are and how to upgrade n8n by changing the pin
+- [x] #1 The live n8n Deployment, Service, PVC, any ingress, and Secret references (names and keys only, never values) are captured as manifests from the cluster, including hand-edits that are not in last-applied
+- [x] #2 A decision is recorded on where those manifests live, in this repo or elsewhere, taking into account whether anything besides GSD uses this n8n
+- [x] #3 The tracked manifests keep the exact pinned image, so applying them never changes the n8n version
+- [x] #4 `kubectl diff` of the tracked manifests against the live cluster shows no changes
+- [x] #5 The stale `k8s/n8n/` copy is removed or replaced, so nothing in this repo describes an n8n that does not exist
+- [x] #6 README and FILE-GLOSSARY describe where the n8n manifests are and how to upgrade n8n by changing the pin
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -58,4 +58,17 @@ Research 2026-10-12:
 - Never in this repo: git history has no manifests for namespace n8n. The live n8n (280d) predates this repo's k8s/ (2026-03-01); k8s/n8n/ was a GSD-local design (namespace gsd) that was never deployed.
 - Users: all 8 workflows on it are GSD (from the TASK-018 export); no other namespace or repo under ~/github references it; the only external reference is k8s/cloudflared capture route to n8n.n8n.svc.cluster.local:80. Its database lives in the separate postgres namespace (out of scope).
 - Decision (AC2, user): track the live manifests in this repo at k8s/n8n, replacing the stale copy. GSD is its only user and the tunnel route that depends on it is already here.
+
+Implementation 2026-10-12 (commit 88619ad):
+- k8s/n8n/ now holds namespace, deployment, service, ingress, pvc captured from the live namespace n8n, plus secret.yaml.example with key names only (DB_POSTGRESDB_PASSWORD, N8N_ENCRYPTION_KEY). Old gsd-namespace deployment/pvc/service removed.
+- Hand-edits preserved: N8N_SECURE_COOKIE=false (not in last-applied) and the TASK-018 image pin n8nio/n8n:2.38.7@sha256:a8c95f75....
+- Verification: kubectl diff -f k8s/n8n/ exits 0 with no output, both before and after commit. (kubectl skips secret.yaml.example since it only reads .yaml/.yml/.json.)
+- Docs: README 'Where n8n runs' under n8n Workflows (location, Postgres dependency, encryption key warning, upgrade-by-pin steps); FILE-GLOSSARY n8n section; DECISIONS 'n8n Manifests Live in This Repo'.
+- Left alone (outside AC): k8s/configmap.yaml N8N_BASIC_AUTH_USER/N8N_WEBHOOK_URL and k8s/secrets.yaml.example N8N_BASIC_AUTH_PASSWORD existed only for the stale n8n and are now unused. Removing them from the repo without also changing the live gsd-config would create drift, so raised with the user instead.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Replaced the never-deployed k8s/n8n (namespace gsd) with the manifests of the n8n that actually runs GSD capture and the digest (namespace n8n), captured from the cluster with the hand-edited N8N_SECURE_COOKIE and the TASK-018 pin to n8nio/n8n:2.38.7@sha256:a8c95f75... intact. n8n-secrets is documented by key name only. Decision (user): track here, since GSD is its only user and the cloudflared capture route already depends on it. Verified with kubectl diff -f k8s/n8n/ returning no changes. README, FILE-GLOSSARY and DECISIONS describe where n8n lives and how to upgrade by changing the pin.
+<!-- SECTION:FINAL_SUMMARY:END -->
