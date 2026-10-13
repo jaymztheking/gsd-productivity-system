@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@James'
 created_date: '2026-10-13 01:49'
-updated_date: '2026-10-13 02:18'
+updated_date: '2026-10-13 02:20'
 labels:
   - n8n
   - digest
@@ -27,11 +27,11 @@ The weekly review digest is now sent twice a week. James received one on Saturda
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The source of the Saturday 10:19 sends is identified from n8n execution history and the live workflow and version state
+- [x] #1 The source of the Saturday 10:19 sends is identified from n8n execution history and the live workflow and version state
 - [ ] #2 No schedule fires the digest outside Sunday 19:00 America/Denver
-- [ ] #3 The fix survives an n8n pod restart, because a restart re-registers schedules from the published state
+- [x] #3 The fix survives an n8n pod restart, because a restart re-registers schedules from the published state
 - [ ] #4 A full week passes with exactly one digest delivered, on Sunday at 19:00 local
-- [ ] #5 If the cause is a publish or import quirk, the README digest publishing steps are updated so future schedule tests clean up after themselves
+- [x] #5 If the cause is a publish or import quirk, the README digest publishing steps are updated so future schedule tests clean up after themselves
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -54,4 +54,12 @@ Root cause (AC1), 2026-10-12:
 - So the test version's cron is orphaned in memory: the UI publish of 84f0c92c on Sep 26 registered it in the main process; the CLI import that restored the Sunday version runs as a separate process and changed only the DB; the later UI publish of 4b7c61e0 added the Sunday cron without removing the old one. The n8n pod has not restarted since Sep 13, so both crons are still live.
 - Fix: restart n8n so crons are rebuilt from published state. The user chose to pin the image first (deployment uses n8nio/n8n:latest; tag 2.38.7 has the same index digest as the running image, a8c95f75).
 - Note: k8s/n8n/ in this repo is NOT the live n8n (it targets namespace gsd and was never deployed). The live n8n is in namespace n8n, managed outside this repo, so the pin is applied with kubectl directly.
+
+Fix applied 2026-10-12 ~20:20 MT:
+- kubectl -n n8n set image deploy/n8n n8n=n8nio/n8n:2.38.7@sha256:a8c95f75... (with change-cause annotation). The pod template change rolled n8n; the new pod n8n-786d5f49bf-5qqwc runs the same digest and reports 2.38.7.
+- Startup log activated exactly two workflows from published state: GSD Inbox Capture (vumX7eNksFjrHSg1) and GSD Weekly Review Digest (wayvHwteu1n9IPRk). The orphaned 84f0c92c cron is gone with the old process.
+- AC3: the fix is the restart itself, and the only thing re-registered is the published Sunday version, so later restarts produce the same result.
+- Capture webhook OK after restart: POST to capture.medaughsolutions.com/webhook/capture without a token returns 403 (header-auth rejection; an unknown webhook path returns 404).
+- README: added a note under Weekly Digest configuration to restart n8n after changing a published schedule through the CLI, and to treat the image pin as the upgrade control.
+- Remaining: AC2 is confirmed when Sat Oct 17 10:19 MT passes with no execution, and AC4 when Sun Oct 18 19:00 MT produces exactly one. Re-run the read-only execution_entity query for wayvHwteu1n9IPRk after that.
 <!-- SECTION:NOTES:END -->
