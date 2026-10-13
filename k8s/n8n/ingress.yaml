@@ -1,0 +1,23 @@
+# LAN-only editor and webhooks. The public capture path goes through the
+# Cloudflare tunnel instead, never through this ingress.
+#
+# Add a DNS A record in Pi-hole:
+#   n8n.home.lab -> 192.168.50.240  (Traefik MetalLB IP)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n
+  namespace: n8n
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: n8n.home.lab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n
+                port:
+                  number: 80

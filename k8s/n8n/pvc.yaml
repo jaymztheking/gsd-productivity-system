@@ -1,12 +1,15 @@
+# local-path storage is bound to the node it was first scheduled on (cherrypi),
+# so the n8n pod always runs there. Workflows and credentials live in Postgres;
+# this volume holds n8n's config file and binary data.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: n8n-pvc
-  namespace: gsd
+  name: n8n-data
+  namespace: n8n
 spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: local-path
   resources:
     requests:
-      storage: 2Gi
+      storage: 1Gi

@@ -360,6 +360,27 @@ Import the workflow JSON files from `n8n/workflows/` into your n8n instance:
 
 To import: n8n UI → Workflows → Import from File.
 
+### Where n8n runs
+
+On the cluster, n8n is the deployment in namespace `n8n`, defined in `k8s/n8n/`.
+It predates GSD, but GSD is its only user. Its workflows and credentials live in
+the `n8n` database on the cluster's shared Postgres (namespace `postgres`), which
+this repo does not manage. `n8n-secrets` is created by hand; see
+`k8s/n8n/secret.yaml.example`, and note that `N8N_ENCRYPTION_KEY` must never
+change or every stored credential becomes unreadable.
+
+The image is pinned by tag and digest, so applying the manifests or restarting
+n8n never changes its version. To upgrade, read the new version's digest and
+change the pin:
+
+```bash
+docker buildx imagetools inspect n8nio/n8n:<version>   # Digest: line
+# set image: n8nio/n8n:<version>@sha256:<digest> in k8s/n8n/deployment.yaml
+kubectl diff -f k8s/n8n/ && kubectl apply -f k8s/n8n/
+```
+
+Upgrading restarts n8n, which interrupts the capture webhook for about a minute.
+
 ### Weekly Digest configuration
 
 - **Schedule** — Sunday 19:00 in `America/Denver`, set by the workflow's own

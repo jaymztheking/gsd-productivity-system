@@ -213,3 +213,13 @@ The MCP server (`mcp/`) was originally built and deployed from outside this repo
 - It is a single small file, so it adds little weight to this repo
 
 It calls the api service directly on `http://api:8000` with the token, rather than through the ui's nginx proxy, since unlike a browser it can hold the secret itself.
+
+## n8n Manifests Live in This Repo
+
+The n8n that runs capture and the digest was deployed by hand into its own `n8n` namespace before GSD existed, and its manifests were never committed. Meanwhile `k8s/n8n/` held a different, never-deployed n8n in the `gsd` namespace, which looked like the live config but was not. Its image tracked `:latest`, so any restart could silently upgrade it (TASK-018). The live manifests are now tracked in `k8s/n8n/` (TASK-019) because:
+
+- GSD is the only thing using it: every workflow on it is a GSD workflow
+- The cloudflared capture route in `k8s/cloudflared/` already depends on its service
+- The image pin needs to be reviewable and survive a re-apply
+
+The namespace stays `n8n` rather than moving into `gsd`, because moving it would mean a new PVC and a migration for no benefit. If another project starts using this n8n, its manifests should move to wherever shared cluster infrastructure is kept.

@@ -210,3 +210,5 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 |------|---------|
 | `workflows/inbox-capture.json` | n8n workflow definition. Webhook node (POST `/capture`) receives `{ "title": "..." }` and HTTP Request node forwards it to `POST http://api:8000/next-actions` with `status: "inbox"`. Import into n8n UI to activate. |
 | `workflows/weekly-digest.json` | n8n workflow definition. Schedule trigger (Sunday 7pm) fires 4 parallel HTTP requests to the API (inbox, active, pending, projects). Code node compiles an HTML digest covering unprocessed inbox items, stale actions (7+ days untouched), pending items, someday items, and projects without next actions. Email Send node delivers via SMTP. |
+
+The n8n instance itself is defined in `k8s/n8n/` (namespace `n8n`): `namespace.yaml`, `deployment.yaml` (image pinned by tag and digest), `service.yaml`, `ingress.yaml` (`n8n.home.lab`), `pvc.yaml`, and `secret.yaml.example` (key names for `n8n-secrets`; the real Secret is created by hand).

@@ -1,18 +1,21 @@
-# Note: workflows stored in ./n8n/workflows/ are not auto-mounted in k3s.
-# After first deploy, import them manually via the n8n UI or CLI:
-#   kubectl exec -n gsd deploy/n8n -- n8n import:workflow --input=/path/to/workflow.json
+# The n8n that runs GSD capture and the weekly digest. It predates GSD and lives
+# in its own namespace; its database is the n8n database on the cluster's shared
+# Postgres (namespace postgres), which is not managed from this repo.
+#
+# The image is pinned by tag AND digest so that restarting n8n never upgrades it
+# (TASK-018). To upgrade, change the pin deliberately:
+#   docker buildx imagetools inspect n8nio/n8n:<version>   # read the index digest
+# then set image to n8nio/n8n:<version>@sha256:<digest> and apply.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: n8n
-  namespace: gsd
+  namespace: n8n
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: n8n
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -20,37 +23,51 @@ spec:
     spec:
       containers:
         - name: n8n
-          image: n8nio/n8n:latest
+          image: n8nio/n8n:2.38.7@sha256:a8c95f75c6fdf65f5f2b7a7b354744eaa1c62bb911b5c00af6499c3f38e4cd32
           ports:
             - containerPort: 5678
           env:
-            - name: N8N_BASIC_AUTH_ACTIVE
-              value: "true"
-            - name: N8N_BASIC_AUTH_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: gsd-config
-                  key: N8N_BASIC_AUTH_USER
-            - name: N8N_BASIC_AUTH_PASSWORD
+            - name: DB_TYPE
+              value: postgresdb
+            - name: DB_POSTGRESDB_HOST
+              value: postgres-postgresql.postgres.svc.cluster.local
+            - name: DB_POSTGRESDB_PORT
+              value: "5432"
+            - name: DB_POSTGRESDB_DATABASE
+              value: n8n
+            - name: DB_POSTGRESDB_USER
+              value: n8n
+            - name: DB_POSTGRESDB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: gsd-secrets
-                  key: N8N_BASIC_AUTH_PASSWORD
-            - name: WEBHOOK_URL
+                  name: n8n-secrets
+                  key: DB_POSTGRESDB_PASSWORD
+            - name: N8N_ENCRYPTION_KEY
               valueFrom:
-                configMapKeyRef:
-                  name: gsd-config
-                  key: N8N_WEBHOOK_URL
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: N8N_ENCRYPTION_KEY
+            - name: N8N_HOST
+              value: n8n.home.lab
+            - name: N8N_PROTOCOL
+              value: http
+            - name: WEBHOOK_URL
+              value: http://n8n.home.lab/
+            # The editor is served over plain http on the LAN, where a Secure
+            # cookie would never be sent back and login would fail.
+            - name: N8N_SECURE_COOKIE
+              value: "false"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
           volumeMounts:
-            - name: n8n-data
+            - name: data
               mountPath: /home/node/.n8n
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 5678
-            initialDelaySeconds: 10
-            periodSeconds: 10
       volumes:
-        - name: n8n-data
+        - name: data
           persistentVolumeClaim:
-            claimName: n8n-pvc
+            claimName: n8n-data
