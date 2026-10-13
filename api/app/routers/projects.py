@@ -21,6 +21,7 @@ from app.crud.projects import (
     update_project,
 )
 from app.database import get_db
+from app.models.enums import ProjectStatus
 from app.schemas.next_action import NextActionOut
 from app.schemas.project import (
     ProjectCreate,
@@ -44,9 +45,10 @@ router = APIRouter()
 @router.get("/projects", response_model=list[ProjectOut])
 async def get_projects(
     root_only: bool = Query(True),
+    status: ProjectStatus | None = None,
     session: AsyncSession = Depends(get_db),
 ):
-    return await list_projects(session, root_only=root_only)
+    return await list_projects(session, root_only=root_only, status=status)
 
 
 @router.get("/projects/{project_id}", response_model=ProjectDetailOut)

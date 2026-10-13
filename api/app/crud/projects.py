@@ -5,6 +5,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.enums import ProjectStatus
 from app.models.next_action import NextAction
 from app.models.project import Project
 from app.models.project_link import ProjectLink
@@ -12,7 +13,9 @@ from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
 async def list_projects(
-    session: AsyncSession, root_only: bool = True
+    session: AsyncSession,
+    root_only: bool = True,
+    status: ProjectStatus | None = None,
 ) -> list[Project]:
     stmt = select(Project).options(
         selectinload(Project.children),
@@ -21,6 +24,8 @@ async def list_projects(
     )
     if root_only:
         stmt = stmt.where(Project.parent_id.is_(None))
+    if status is not None:
+        stmt = stmt.where(Project.status == status)
     stmt = stmt.order_by(Project.created_at.desc())
     result = await session.execute(stmt)
     return list(result.scalars().all())

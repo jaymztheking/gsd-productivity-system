@@ -147,14 +147,15 @@ operation: change it in the n8n credential and in the Shortcut's header.
 
 ```bash
 pip install -r api/requirements.txt          # includes pytest and httpx
-PYTHONPATH=api pytest api/tests/test_auth.py api/tests/test_next_action_tags.py api/tests/test_routine.py -v
+PYTHONPATH=api pytest api/tests/test_auth.py api/tests/test_next_action_tags.py api/tests/test_routine.py api/tests/test_projects.py -v
 ```
 
 `test_auth.py` needs no database or running services — it stubs the session and
 the crud calls to exercise the auth layer alone. `test_next_action_tags.py` runs
 the real crud functions against an in-memory SQLite database (via `aiosqlite`). `test_routine.py` drives the
 routine endpoints against a SQLite file with the clock pinned, to cross local
-midnight on demand. `test_digest_pipeline.py` is an
+midnight on demand. `test_projects.py` drives the project list endpoint the same
+way, covering the status filter the weekly digest relies on. `test_digest_pipeline.py` is an
 integration suite and does need a live API:
 
 ```bash
@@ -423,7 +424,7 @@ n8n; upgrade deliberately by changing the pin.
 ```
 GET    /tags                                 — all tags (ordered by sort_order)
 
-GET    /projects                             — list projects (?root_only=true)
+GET    /projects                             — list projects (?root_only=true, ?status=active|complete; no status = all)
 GET    /projects/:id                         — project detail (with links, children)
 POST   /projects                             — create project
 PATCH  /projects/:id                         — update project
