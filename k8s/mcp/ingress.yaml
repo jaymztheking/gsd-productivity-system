@@ -1,0 +1,25 @@
+# LAN-only, like gsd.home.lab: not routed through the Cloudflare tunnel.
+# The MCP server holds the API token, so anything that can reach this host can
+# read and write GSD data through it without presenting one.
+#
+# Add a DNS A record in Pi-hole:
+#   mcp.gsd.home.lab -> 192.168.50.240  (Traefik MetalLB IP)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gsd-mcp-ingress
+  namespace: gsd
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+    - host: mcp.gsd.home.lab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mcp
+                port:
+                  number: 8080

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp
+  namespace: gsd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp
+  template:
+    metadata:
+      labels:
+        app: mcp
+    spec:
+      containers:
+        - name: mcp
+          image: jaymztheking/gsd-mcp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MCP_TRANSPORT
+              value: sse
+            - name: PORT
+              value: "8080"
+            # In-cluster, straight to the api service. Unlike the browser, this
+            # client can hold the token itself, so it does not go through the
+            # ui's nginx proxy.
+            - name: GSD_API_URL
+              value: http://api:8000
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gsd-secrets
+                  key: API_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20

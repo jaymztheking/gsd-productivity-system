@@ -31,6 +31,18 @@ Every file in the project, organized by component and function.
 
 ---
 
+## MCP Server (`mcp/`)
+
+| File | Purpose |
+|------|---------|
+| `server.py` | MCP server exposing five tools (capture_to_inbox, list_tags, list_projects, create_task, create_project) over SSE or stdio. Calls the GSD API with the `X-API-Token` header from `API_TOKEN`. |
+| `requirements.txt` | Python dependencies: mcp, httpx, starlette, uvicorn. |
+| `Dockerfile` | Production image: `python:3.12-slim`, runs `server.py`. Published as `jaymztheking/gsd-mcp`. |
+
+Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ingress).
+
+---
+
 ## API (`api/`)
 
 ### Config

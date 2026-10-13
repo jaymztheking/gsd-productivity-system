@@ -203,3 +203,13 @@ All ports are configurable via `.env`, but the defaults were chosen intentionall
 | n8n      | 5678      | 5678           | n8n's default. No reason to change it — no common conflicts. |
 
 The UI proxies `/api/*` requests to the API container on port 8000 internally (via Docker networking), so from the browser's perspective everything is on `:3000`. The API is also exposed directly on `:8000` for CLI/curl usage, n8n webhook calls, and the auto-generated Swagger docs at `/docs`.
+
+## MCP Server Lives in This Repo
+
+The MCP server (`mcp/`) was originally built and deployed from outside this repository, and its source was later lost; the only surviving copy was inside the running `gsd-mcp` image. Because nothing here referenced it, adding token auth to the API (TASK-003) broke it without any warning, and an earlier hand-edit had already pointed it at the wrong API port. It is now tracked here (TASK-007) because:
+
+- It is a client of the GSD API, so API changes need to be made and reviewed alongside it
+- Its manifests sit next to the api and ui manifests and read the same `gsd-secrets` Secret
+- It is a single small file, so it adds little weight to this repo
+
+It calls the api service directly on `http://api:8000` with the token, rather than through the ui's nginx proxy, since unlike a browser it can hold the secret itself.

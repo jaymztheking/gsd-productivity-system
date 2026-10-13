@@ -15,6 +15,7 @@ Siri / Apple Watch ──> iOS Shortcut ──> n8n webhook ──> API ──> 
 - **FastAPI** — async REST API, full CRUD + tag-based AND-filtering
 - **React + Vite** — single app serving Engage (filter + do), Intake (triage), and Projects (manage) routes
 - **n8n** — capture webhook + weekly review digest
+- **MCP server** (`mcp/`) — lets an MCP client (e.g. Claude) capture tasks and create projects over SSE at `mcp.gsd.home.lab`, LAN only
 
 ## Quick Start (Local Dev)
 
@@ -84,6 +85,7 @@ only if some other browser origin must call the API directly.
 |---|---|---|
 | API | `API_TOKEN` env | From `gsd-secrets` in k3s |
 | UI proxy | `API_TOKEN` env | Rendered into nginx config by envsubst at startup |
+| MCP server | `API_TOKEN` env | From `gsd-secrets` in k3s; sent as `X-API-Token` on every call |
 | n8n workflows | `GSD API Token` credential | Header Auth, stored in n8n — see n8n Credentials below |
 | iOS Shortcut | Shortcut definition | Stored in the iCloud keychain |
 
@@ -273,6 +275,9 @@ docker buildx build --platform linux/arm64 -t gsd-api:latest ./api --load
 
 # Build UI for ARM64
 docker buildx build --platform linux/arm64 -t gsd-ui:latest ./ui --load
+
+# Build and push the MCP server (multi-arch, as it has always been published)
+docker buildx build --platform linux/amd64,linux/arm64 -t jaymztheking/gsd-mcp:latest ./mcp --push
 ```
 
 Or build natively on the Pi — just `docker compose up --build`.

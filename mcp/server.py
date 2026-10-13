@@ -8,12 +8,19 @@ from mcp.server import Server
 from mcp import types
 
 API_BASE = os.environ.get("GSD_API_URL", "http://localhost:8000").rstrip("/")
+# Required: the GSD API rejects every request without it. Read at import so a
+# missing secret crashes the pod at startup instead of 401ing on each tool call.
+API_TOKEN = os.environ["API_TOKEN"]
 
 server = Server("gsd-mcp")
 
 
 def _client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(base_url=API_BASE, timeout=10.0)
+    return httpx.AsyncClient(
+        base_url=API_BASE,
+        headers={"X-API-Token": API_TOKEN},
+        timeout=10.0,
+    )
 
 
 def _fmt(data: Any) -> str:
@@ -100,17 +107,17 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             payload: dict = {"title": arguments["title"], "status": "inbox"}
             if notes := arguments.get("notes"):
                 payload["notes"] = notes
-            resp = await client.post("/api/next-actions", json=payload)
+            resp = await client.post("/next-actions", json=payload)
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
         elif name == "list_tags":
-            resp = await client.get("/api/tags")
+            resp = await client.get("/tags")
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
         elif name == "list_projects":
-            resp = await client.get("/api/projects", params={"root_only": "false"})
+            resp = await client.get("/projects", params={"root_only": "false"})
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
@@ -119,7 +126,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             for key in ("notes", "status", "project_id", "tag_ids"):
                 if val := arguments.get(key):
                     payload[key] = val
-            resp = await client.post("/api/next-actions", json=payload)
+            resp = await client.post("/next-actions", json=payload)
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
@@ -128,7 +135,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             for key in ("description", "parent_id"):
                 if val := arguments.get(key):
                     payload[key] = val
-            resp = await client.post("/api/projects", json=payload)
+            resp = await client.post("/projects", json=payload)
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
@@ -140,14 +147,18 @@ def _build_sse_app():
     from mcp.server.sse import SseServerTransport
     from starlette.applications import Starlette
     from starlette.requests import Request
-    from starlette.responses import JSONResponse
+    from starlette.responses import JSONResponse, Response
     from starlette.routing import Mount, Route
 
     sse = SseServerTransport("/messages/")
 
-    async def handle_sse(scope, receive, send):
-        async with sse.connect_sse(scope, receive, send) as streams:
+    # A Route, not a Mount: under Mount("/sse") the transport prefixes the
+    # mount's root_path and advertises /sse/messages/, which lands back in this
+    # handler instead of handle_post_message and stalls the handshake forever.
+    async def handle_sse(request: Request):
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
             await server.run(streams[0], streams[1], server.create_initialization_options())
+        return Response()
 
     async def handle_health(request: Request):
         return JSONResponse({"status": "ok"})
@@ -155,7 +166,7 @@ def _build_sse_app():
     return Starlette(
         routes=[
             Route("/health", endpoint=handle_health),
-            Mount("/sse", app=handle_sse),
+            Route("/sse", endpoint=handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
         ]
     )
