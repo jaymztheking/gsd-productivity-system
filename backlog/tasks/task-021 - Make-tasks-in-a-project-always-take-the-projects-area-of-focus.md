@@ -1,10 +1,11 @@
 ---
 id: TASK-021
 title: Make tasks in a project always take the project's area of focus
-status: To Do
+status: In Progress
 assignee:
   - '@James'
 created_date: '2026-10-14 02:24'
+updated_date: '2026-10-14 02:25'
 labels:
   - api
   - ui
@@ -38,3 +39,14 @@ TASK-016 made a task's area default to its project's area, but only once: when t
 - [ ] #7 In Engage columns view, dragging a project task into a different area column does not change its area, and the card returns to its column with a short explanation
 - [ ] #8 API tests cover inheritance, propagation on project area change, refusal of overrides, and leaving a project. DECISIONS.md, README and FILE-GLOSSARY describe the new rule
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Keep next_actions.area_id as the stored value (Engage columns and filters read it) but make the API keep it in sync: create with project_id -> project's area (any area_id ignored); PATCH that sets project_id -> project's area (area_id in the same request ignored); PATCH area_id alone on a project task -> 422 unless equal to the project's area; PATCH project area -> UPDATE all its tasks
+2. Fix PATCH project_id null being ignored (it used 'is not None'), so a task can actually leave its project; on leaving it keeps its area. Project delete already SET NULLs project_id and leaves area
+3. Migration 010: align existing project tasks' area_id with their project's
+4. UI: AreaSelector shows the project's area read-only for tasks in a project (Intake, Engage editor); editor sends area_id only for tasks without a project; EngageBoard refuses cross-column drags of project tasks and shows a short notice; project detail copy updated
+5. Tests: rewrite TASK-016 override tests to the new rule, add propagation, refusal, same-request precedence, leave-project and project-delete tests; migration run on Postgres 15; Playwright check of read-only picker and refused drag
+6. Docs: DECISIONS areas entry, README, FILE-GLOSSARY
+<!-- SECTION:PLAN:END -->
