@@ -67,6 +67,8 @@ Verification, 2026-10-13:
 Not yet deployed: API/UI images, migration on k3s Postgres, MCP image, and re-import of weekly-digest.json into live n8n (needs an n8n restart afterwards per TASK-018 README note).
 
 Deployed 2026-10-13 (~20:15 MT) from main 65355f3: images jaymztheking/gsd-api@sha256:bf35def8, gsd-ui@sha256:74dbadb3, gsd-mcp@sha256:9ac7511c (previous images kept as :pre-areas for rollback). API init container ran migrations 007-009 (alembic now 009). DB backup taken first: ~/gsd-backups/gsd-pre-areas-20261013-1956.dump. Checked live through gsd.home.lab: the API returns areas/someday/tags (#someday gone), Engage order populated, UI bundle has the new features.
+
+n8n: updated digest imported over wayvHwteu1n9IPRk with its live credential IDs, published with the CLI, then n8n restarted. Startup activated GSD Weekly Review Digest and GSD Inbox Capture. Exported published version shows the Sunday 19:00 America/Denver trigger and Fetch Someday Items (status=someday) with the GSD API Token credential. Capture webhook without a token returns 403 as expected. The two #someday-tagged items were both already complete, so no task moved to Someday. First digest with the new section: Sun 2026-10-18 19:00 MT.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
