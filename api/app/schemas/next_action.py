@@ -13,7 +13,7 @@ class NextActionCreate(BaseModel):
     notes: str | None = None
     status: ActionStatus = ActionStatus.inbox
     project_id: UUID | None = None
-    # Left out, a task in a project takes the project's area
+    # Ignored when project_id is set: the task takes the project's area
     area_id: UUID | None = None
     tag_ids: list[UUID] = []
 
@@ -22,8 +22,10 @@ class NextActionUpdate(BaseModel):
     title: str | None = None
     notes: str | None = None
     status: ActionStatus | None = None
+    # Sent as null, removes the task from its project; left out, leaves it
     project_id: UUID | None = None
-    # Sent as null, clears the area; left out, leaves it alone
+    # Sent as null, clears the area; left out, leaves it alone. Refused on a
+    # task in a project unless it matches the project's area.
     area_id: UUID | None = None
     tag_ids: list[UUID] | None = None
 

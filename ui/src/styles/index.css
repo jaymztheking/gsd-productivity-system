@@ -1088,3 +1088,20 @@ body {
     flex-basis: 85%;
   }
 }
+
+.area-inherited {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.board-notice {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-area);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-area) 12%, transparent);
+  font-size: 0.85rem;
+}

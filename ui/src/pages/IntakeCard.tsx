@@ -1,7 +1,5 @@
 import { useState } from "react";
-import AreaSelector, {
-  areaAfterProjectChange,
-} from "../components/AreaSelector";
+import AreaSelector from "../components/AreaSelector";
 import ProjectSelector from "../components/ProjectSelector";
 import TagSelector from "../components/TagSelector";
 import type {
@@ -73,14 +71,12 @@ export default function IntakeCard({
       notes: notes.trim() || null,
       tag_ids,
       project_id: projectId,
-      area_id: areaId,
+      // Ignored by the API when a project is set: it takes the project's area
+      area_id: project ? null : areaId,
     });
   };
 
-  const handleProjectSelect = (id: string | null) => {
-    setAreaId(areaAfterProjectChange(projects, projectId, id, areaId));
-    setProjectId(id);
-  };
+  const project = projects.find((p) => p.id === projectId) ?? null;
 
   const handleSaveProject = async () => {
     if (!projectName.trim()) return;
@@ -173,13 +169,18 @@ export default function IntakeCard({
           <ProjectSelector
             projects={projects}
             selected={projectId}
-            onSelect={handleProjectSelect}
+            onSelect={setProjectId}
             onCreateNew={async (name, description) => {
               const p = await onMakeProject(name, description);
               return p;
             }}
           />
-          <AreaSelector areas={areas} selected={areaId} onSelect={setAreaId} />
+          <AreaSelector
+            areas={areas}
+            selected={areaId}
+            onSelect={setAreaId}
+            project={project}
+          />
           <div className="intake-actions">
             <button
               className="btn btn--ghost"

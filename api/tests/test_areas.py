@@ -125,41 +125,130 @@ def test_unknown_area_id_is_rejected(api_client):
     assert res.status_code == 422
 
 
-def test_task_in_project_defaults_to_project_area(api_client):
+# --- Tasks in a project take the project's area (TASK-021) -------------------
+
+
+def _patch(client, task, **fields):
+    return client.patch(f"/next-actions/{task['id']}", json=fields)
+
+
+def test_task_in_project_has_project_area(api_client):
     work = _area(api_client, "Professional development")
     project = _project(api_client, "Get certified", area_id=work["id"])
     task = _task(api_client, "Book the exam", project_id=project["id"])
     assert task["area_id"] == work["id"]
 
 
-def test_project_area_default_can_be_overridden(api_client):
-    home = _area(api_client, "Home life")
-    work = _area(api_client, "Professional development")
-    project = _project(api_client, "Get certified", area_id=work["id"])
-    task = _task(
-        api_client, "Clear the desk", project_id=project["id"], area_id=home["id"]
-    )
-    assert task["area_id"] == home["id"]
-    # An explicit null means no area, not "use the project's"
-    task = _task(api_client, "Read a book", project_id=project["id"], area_id=None)
+def test_task_in_project_without_area_has_none(api_client):
+    _area(api_client, "Home life")
+    project = _project(api_client, "Renovate kitchen")
+    task = _task(api_client, "Measure walls", project_id=project["id"])
     assert task["area_id"] is None
 
 
-def test_unassigned_task_moved_into_project_takes_its_area(api_client):
+def test_area_sent_on_create_loses_to_the_project(api_client):
+    home = _area(api_client, "Home life")
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    for area_id in (home["id"], None):
+        task = _task(
+            api_client, "Clear the desk", project_id=project["id"], area_id=area_id
+        )
+        assert task["area_id"] == work["id"]
+
+
+def test_changing_project_area_moves_its_tasks(api_client):
+    home = _area(api_client, "Home life")
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    other = _project(api_client, "Renovate kitchen", area_id=home["id"])
+    a = _task(api_client, "Book the exam", project_id=project["id"])
+    b = _task(api_client, "Buy study guide", project_id=project["id"])
+    c = _task(api_client, "Measure walls", project_id=other["id"])
+    loose = _task(api_client, "Call bank", area_id=work["id"])
+
+    res = api_client.patch(f"/projects/{project['id']}", json={"area_id": home["id"]})
+    assert res.status_code == 200, res.text
+    for t in (a, b):
+        assert _get_task(api_client, t["id"])["area_id"] == home["id"]
+    # Tasks outside the project are untouched
+    assert _get_task(api_client, c["id"])["area_id"] == home["id"]
+    assert _get_task(api_client, loose["id"])["area_id"] == work["id"]
+
+    api_client.patch(f"/projects/{project['id']}", json={"area_id": None})
+    for t in (a, b):
+        assert _get_task(api_client, t["id"])["area_id"] is None
+
+
+def test_different_area_on_project_task_is_refused(api_client):
+    home = _area(api_client, "Home life")
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    task = _task(api_client, "Book the exam", project_id=project["id"])
+
+    for area_id in (home["id"], None):
+        res = _patch(api_client, task, area_id=area_id)
+        assert res.status_code == 422, res.text
+    assert _get_task(api_client, task["id"])["area_id"] == work["id"]
+    # Re-sending the project's own area is harmless, as the editor does
+    res = _patch(api_client, task, title="Book exam", area_id=work["id"])
+    assert res.status_code == 200, res.text
+
+
+def test_project_and_area_in_one_request_takes_project_area(api_client):
+    home = _area(api_client, "Home life")
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    task = _task(api_client, "Clear the desk", area_id=home["id"])
+    res = _patch(api_client, task, project_id=project["id"], area_id=home["id"])
+    assert res.status_code == 200, res.text
+    assert res.json()["area_id"] == work["id"]
+
+
+def test_task_moved_into_project_takes_its_area(api_client):
     home = _area(api_client, "Home life")
     work = _area(api_client, "Professional development")
     project = _project(api_client, "Get certified", area_id=work["id"])
     loose = _task(api_client, "Book the exam")
     placed = _task(api_client, "Clear the desk", area_id=home["id"])
-
     for task in (loose, placed):
-        res = api_client.patch(
-            f"/next-actions/{task['id']}", json={"project_id": project["id"]}
-        )
+        res = _patch(api_client, task, project_id=project["id"])
         assert res.status_code == 200, res.text
-    assert _get_task(api_client, loose["id"])["area_id"] == work["id"]
-    # A task that already had an area keeps it
-    assert _get_task(api_client, placed["id"])["area_id"] == home["id"]
+        assert res.json()["area_id"] == work["id"]
+
+
+def test_task_leaving_project_keeps_area_and_can_change_it(api_client):
+    home = _area(api_client, "Home life")
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    task = _task(api_client, "Book the exam", project_id=project["id"])
+
+    res = _patch(api_client, task, project_id=None)
+    assert res.status_code == 200, res.text
+    assert res.json()["project_id"] is None
+    assert res.json()["area_id"] == work["id"]
+
+    res = _patch(api_client, task, area_id=home["id"])
+    assert res.status_code == 200, res.text
+    assert res.json()["area_id"] == home["id"]
+
+
+def test_task_keeps_area_when_its_project_is_deleted(api_client):
+    work = _area(api_client, "Professional development")
+    project = _project(api_client, "Get certified", area_id=work["id"])
+    task = _task(api_client, "Book the exam", project_id=project["id"])
+    assert api_client.delete(f"/projects/{project['id']}").status_code == 204
+    after = _get_task(api_client, task["id"])
+    assert after["project_id"] is None
+    assert after["area_id"] == work["id"]
+
+
+def test_unknown_project_is_rejected(api_client):
+    missing = str(uuid.uuid4())
+    res = api_client.post("/next-actions", json={"title": "x", "project_id": missing})
+    assert res.status_code == 422
+    task = _task(api_client, "x")
+    assert _patch(api_client, task, project_id=missing).status_code == 422
 
 
 def test_deleting_area_unassigns_tasks_and_projects(api_client):

@@ -1,8 +1,6 @@
 import { useState } from "react";
 import AreaBadge from "../components/AreaBadge";
-import AreaSelector, {
-  areaAfterProjectChange,
-} from "../components/AreaSelector";
+import AreaSelector from "../components/AreaSelector";
 import TagBadge from "../components/TagBadge";
 import TagSelector from "../components/TagSelector";
 import ProjectSelector from "../components/ProjectSelector";
@@ -101,13 +99,21 @@ export default function TaskCard({
       status,
       tag_ids,
       project_id: projectId,
-      area_id: areaId,
+      // A task in a project takes the project's area; the API sets it
+      ...(projectId ? {} : { area_id: areaId }),
     });
     setExpanded(false);
   };
 
+  // The task's current project may be a sub-project, missing from the list
+  const projectById = (id: string | null) =>
+    projects.find((p) => p.id === id) ??
+    (action.project?.id === id ? action.project : null);
+
   const handleProjectSelect = (id: string | null) => {
-    setAreaId(areaAfterProjectChange(projects, projectId, id, areaId));
+    // Leaving a project keeps its area, which is then the task's own
+    const leaving = projectById(projectId);
+    if (!id && leaving) setAreaId(leaving.area_id);
     setProjectId(id);
   };
 
@@ -237,7 +243,12 @@ export default function TaskCard({
             onSelect={handleProjectSelect}
             onCreateNew={onCreateProject}
           />
-          <AreaSelector areas={areas} selected={areaId} onSelect={setAreaId} />
+          <AreaSelector
+            areas={areas}
+            selected={areaId}
+            onSelect={setAreaId}
+            project={projectById(projectId)}
+          />
           <div className="row gap-sm">
             <label
               style={{

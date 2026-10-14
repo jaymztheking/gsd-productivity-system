@@ -93,7 +93,9 @@ Areas (home life, professional development, ...) are GTD's areas of responsibili
 - Projects need an area too, and tags only attach to next actions
 - Areas have a user-set display order that drives the Engage column layout, and users create, rename and delete them; the tag taxonomy is seeded and fixed
 
-Each task and project has at most one area. A task added to a project without an explicit area takes the project's area, and an unassigned task moved into a project does too; an explicit `area_id` (including null) always wins. Deleting an area unassigns its tasks and projects rather than deleting them.
+Each task and project has at most one area. Deleting an area unassigns its tasks and projects rather than deleting them.
+
+A task in a project always has the project's area, including none when the project has none (TASK-021, which replaced TASK-016's overridable default). Area describes which part of life a piece of work serves, and that is a property of the project, so letting individual tasks drift made the area columns in Engage disagree with the project list. The API keeps `next_actions.area_id` equal to the project's: changing a project's area updates all its tasks, an `area_id` sent alone for a project task that differs from the project's is refused with 422, and one sent together with `project_id` is overridden by the project's. A task that leaves its project (or whose project is deleted) keeps the area it had, which is then its own to change. Sub-projects have their own area, which their tasks follow. In the UI, project tasks show the area read-only, and dragging one into another area column in Engage is refused with a note to change the project instead.
 
 ## Pending Status vs. `@waiting` Tag
 

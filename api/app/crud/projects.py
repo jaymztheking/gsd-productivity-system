@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -96,6 +96,12 @@ async def update_project(
     if "area_id" in data.model_fields_set:
         await require_area(session, data.area_id)
         project.area_id = data.area_id
+        # Its tasks always have the project's area
+        await session.execute(
+            update(NextAction)
+            .where(NextAction.project_id == project.id)
+            .values(area_id=data.area_id)
+        )
     await session.commit()
     await session.refresh(project)
     return project

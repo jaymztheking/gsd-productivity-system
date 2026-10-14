@@ -17,7 +17,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useRef, type ComponentProps } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import type { Area, NextAction } from "../types/models";
 import SortableTaskCard from "./SortableTaskCard";
 
@@ -70,6 +70,15 @@ export default function EngageBoard({
 
   // The area the dragged task had when the drag began
   const startColumn = useRef<string | null>(null);
+  // Set when a project task is dragged over another area's column
+  const refused = useRef(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const columns = [
     ...areas.map((a) => ({ key: a.id, name: a.name })),
@@ -96,6 +105,11 @@ export default function EngageBoard({
     if (!from || !to || from === to) return;
 
     const index = actions.findIndex((a) => a.id === active.id);
+    if (actions[index].project_id) {
+      // A task in a project takes the project's area, so it stays put
+      refused.current = true;
+      return;
+    }
     const moved = { ...actions[index], area_id: to === UNASSIGNED ? null : to };
     const rest = actions.filter((a) => a.id !== active.id);
 
@@ -118,6 +132,18 @@ export default function EngageBoard({
     const column = containerOf(active.id);
     const began = startColumn.current;
     startColumn.current = null;
+    if (refused.current) {
+      refused.current = false;
+      const action = actions.find((a) => a.id === active.id);
+      if (action && over && containerOf(over.id) !== column) {
+        setNotice(
+          `“${action.title}” takes its area from its project${
+            action.project ? `, ${action.project.name}` : ""
+          }. Change the project's area to move it.`
+        );
+        return;
+      }
+    }
     if (!over || !column) return;
 
     let next = actions;
@@ -143,7 +169,16 @@ export default function EngageBoard({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => {
+        startColumn.current = null;
+        refused.current = false;
+      }}
     >
+      {notice && (
+        <div className="board-notice" role="status">
+          {notice}
+        </div>
+      )}
       <div className="engage-board">
         {columns.map((column) => {
           const items = actions.filter((a) => columnOf(a) === column.key);

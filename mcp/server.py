@@ -76,8 +76,8 @@ async def list_tools() -> list[types.Tool]:
             description=(
                 "Create a next-action with full control. "
                 "Use list_tags(), list_projects() and list_areas() first for "
-                "valid UUIDs. Without area_id, a task in a project takes the "
-                "project's area. "
+                "valid UUIDs. A task in a project always takes the project's "
+                "area; area_id only applies to tasks without a project. "
                 "status: inbox | active | pending | someday | complete."
             ),
             inputSchema={

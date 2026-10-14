@@ -70,11 +70,12 @@ async def get_next_action(
 async def create_next_action(
     session: AsyncSession, data: NextActionCreate
 ) -> NextAction:
-    if "area_id" in data.model_fields_set:
+    if data.project_id is not None:
+        # A task in a project always has the project's area
+        area_id = (await _get_project(session, data.project_id)).area_id
+    else:
         await require_area(session, data.area_id)
         area_id = data.area_id
-    else:
-        area_id = await _project_area(session, data.project_id)
 
     action = NextAction(
         title=data.title,
@@ -119,15 +120,29 @@ async def update_next_action(
             action.engage_sort_order = await _bottom_of_engage(session)
         action.status = data.status
 
-    if data.project_id is not None and data.project_id != action.project_id:
-        action.project_id = data.project_id
-        # An unassigned task moved into a project takes the project's area
-        if action.area_id is None and "area_id" not in data.model_fields_set:
-            action.area_id = await _project_area(session, data.project_id)
+    # A task in a project always has the project's area. Leaving a project
+    # (project_id sent as null) keeps that area, which is then the task's own.
+    if "project_id" in data.model_fields_set:
+        if data.project_id is None:
+            action.project_id = None
+        else:
+            project = await _get_project(session, data.project_id)
+            action.project_id = project.id
+            action.area_id = project.area_id
 
     if "area_id" in data.model_fields_set:
-        await require_area(session, data.area_id)
-        action.area_id = data.area_id
+        if action.project_id is None:
+            await require_area(session, data.area_id)
+            action.area_id = data.area_id
+        elif "project_id" not in data.model_fields_set and (
+            data.area_id != action.area_id
+        ):
+            # Sent together with a project, the project's area wins instead
+            raise HTTPException(
+                status_code=422,
+                detail="This task takes its area from its project; "
+                "change the project's area instead",
+            )
 
     # Update tags if provided (replace all). Assigning the collection lets
     # the ORM diff old against new; a raw DELETE first would leave the loaded
@@ -200,13 +215,11 @@ async def _bottom_of_engage(session: AsyncSession) -> int:
     return 0 if last is None else last + 1
 
 
-async def _project_area(
-    session: AsyncSession, project_id: UUID | None
-) -> UUID | None:
-    if project_id is None:
-        return None
+async def _get_project(session: AsyncSession, project_id: UUID) -> Project:
     project = await session.get(Project, project_id)
-    return project.area_id if project else None
+    if project is None:
+        raise HTTPException(status_code=422, detail="Project not found")
+    return project
 
 
 async def _fetch_tags(

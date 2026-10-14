@@ -150,7 +150,7 @@ export default function ProjectDetailPage() {
             onSelect={(areaId) => updateProject({ area_id: areaId })}
           />
           <div className="text-muted" style={{ fontSize: "0.8rem" }}>
-            New tasks in this project start in its area.
+            Tasks in this project always take its area.
           </div>
         </div>
       )}
