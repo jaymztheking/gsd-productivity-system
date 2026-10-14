@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@James'
 created_date: '2026-10-13 01:47'
-updated_date: '2026-10-14 01:41'
+updated_date: '2026-10-14 02:13'
 labels:
   - ui
   - api
@@ -65,6 +65,8 @@ Verification, 2026-10-13:
 - Also: TaskCard status select gains Someday (removes the card from Engage); MCP create_task status enum includes someday.
 
 Not yet deployed: API/UI images, migration on k3s Postgres, MCP image, and re-import of weekly-digest.json into live n8n (needs an n8n restart afterwards per TASK-018 README note).
+
+Deployed 2026-10-13 (~20:15 MT) from main 65355f3: images jaymztheking/gsd-api@sha256:bf35def8, gsd-ui@sha256:74dbadb3, gsd-mcp@sha256:9ac7511c (previous images kept as :pre-areas for rollback). API init container ran migrations 007-009 (alembic now 009). DB backup taken first: ~/gsd-backups/gsd-pre-areas-20261013-1956.dump. Checked live through gsd.home.lab: the API returns areas/someday/tags (#someday gone), Engage order populated, UI bundle has the new features.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
