@@ -1,11 +1,11 @@
 ---
 id: TASK-016
 title: Add areas of focus to tasks and projects
-status: In Progress
+status: Done
 assignee:
   - '@James'
 created_date: '2026-10-13 01:48'
-updated_date: '2026-10-14 01:41'
+updated_date: '2026-10-14 01:45'
 labels:
   - api
   - ui
@@ -28,12 +28,12 @@ James wants to group his work into broad areas of focus, such as home life and p
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Areas can be created, renamed, reordered and deleted, and the order is persisted
-- [ ] #2 A next action has at most one area, and a project has at most one area
-- [ ] #3 A new task added to a project that has an area defaults to that area, and the default can be overridden
-- [ ] #4 The area can be set and changed in Intake, on a task in Engage, and on the project detail screen
-- [ ] #5 Deleting an area leaves its tasks and projects unassigned rather than deleting them
-- [ ] #6 The schema change ships as an Alembic migration, and API tests cover area CRUD and assignment
+- [x] #1 Areas can be created, renamed, reordered and deleted, and the order is persisted
+- [x] #2 A next action has at most one area, and a project has at most one area
+- [x] #3 A new task added to a project that has an area defaults to that area, and the default can be overridden
+- [x] #4 The area can be set and changed in Intake, on a task in Engage, and on the project detail screen
+- [x] #5 Deleting an area leaves its tasks and projects unassigned rather than deleting them
+- [x] #6 The schema change ships as an Alembic migration, and API tests cover area CRUD and assignment
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -47,3 +47,25 @@ James wants to group his work into broad areas of focus, such as home life and p
 6. Tests: area CRUD, ordering, delete unassigns, task/project assignment, project default and override
 7. Docs: README data model, FILE-GLOSSARY, DECISIONS entry on areas vs context tags; MCP server create_task gains area_id
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented on branch task-016-areas (commit 9567e83).
+
+Decisions: areas are a separate table, not a tag category (see DECISIONS.md). Management lives in a collapsible 'Areas of focus' section on the Projects page with up/down reorder (drag arrives with TASK-015/017). PATCH distinguishes an omitted area_id (leave alone) from null (clear) via model_fields_set. Defaulting: a new task with project_id and no area_id takes the project's area; an unassigned task moved into a project also takes it; an explicit area_id, including null, wins. In the UI editors the area follows the chosen project unless the user picked one by hand (areaAfterProjectChange). Unknown area IDs get 422, duplicate names 409. MCP server gains list_areas and area_id on create_task/create_project.
+
+Verification, 2026-10-13:
+- tests/test_areas.py, 13 tests (CRUD, order persistence, reorder validation, uniqueness, assignment, omitted vs null, project default and override, move into project, delete unassigns); full unit suite 78 passed; digest pipeline 12 passed against local Postgres API.
+- Migration 008 up/down/up on postgres:15-alpine; deleting an area row directly in Postgres set next_actions.area_id to NULL (FK SET NULL works independently of the crud's explicit unassign).
+- Playwright at 375px: add areas, duplicate name shows an error, tap-to-rename, move up, order survives reload; project detail area set and survives reload; Intake Make Task with project 'Get certified' pre-selects its area 'Professional development'; saved task shows the area badge in Engage; changing it in the Engage editor persists across reload; no horizontal overflow.
+- npm run build passes.
+
+Not yet deployed.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added areas of focus: a new areas table (migration 008) with nullable area_id on next actions and projects, /areas CRUD and reorder endpoints, and project-area defaulting for tasks. The UI manages areas under 'Areas of focus' on the Projects page and lets you set the area in Intake, the Engage task editor and project detail, with area badges on task cards and project list items. Deleting an area unassigns rather than deletes. Verified with 13 new API tests (78 total passing), a migration up/down run and FK check on Postgres 15, and a Playwright walkthrough at phone width. Not yet deployed.
+<!-- SECTION:FINAL_SUMMARY:END -->
