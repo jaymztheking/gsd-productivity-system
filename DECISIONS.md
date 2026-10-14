@@ -190,14 +190,13 @@ Tasks use soft delete (`deleted_at` timestamp) instead of hard delete. This pres
 
 This supports the GTD principle of reviewing what was accomplished while keeping the active task list clean.
 
-## Task Reordering: Buttons over Drag-and-Drop
+## Task Reordering: Buttons in Projects, Drag in Engage
 
-Project task lists use move-up/move-down chevron buttons instead of drag-and-drop because:
+Project task lists, links, areas and routine items use move-up/move-down chevron buttons: they fit the 44px tap target pattern and need no dependency, and those lists are short.
 
-- Drag-and-drop conflicts with mobile scroll behavior
-- No additional npm dependencies needed
-- Chevron buttons fit the existing 44px tap target pattern
-- Server-side ordering is a simple array of IDs (`PUT /projects/:id/tasks/order`)
+Engage uses drag-and-drop (TASK-015), because pulling the most important item to the top of a long list one step at a time is tedious, and the planned area columns need cards dragged between columns. It uses dnd-kit (`@dnd-kit/core`, `sortable`, `utilities`, pinned to exact versions) rather than hand-written pointer code, since dnd-kit already handles mouse, touch, keyboard, auto-scroll near the screen edge, and multiple containers. The original objection, that dragging fights mobile scrolling, is handled by a grip: only the ⠿ handle starts a drag (it sets `touch-action: none`), so swiping a card still scrolls and tapping it still opens the editor.
+
+The Engage order is one `engage_sort_order` shared by active and pending tasks. Filters and area columns show subsets of it; `PUT /next-actions/order` takes just the shown tasks and rearranges them within the slots they already occupy, so hidden tasks keep their places. Tasks entering Engage (created active, activated from inbox or someday, reopened) go to the bottom; switching between active and pending keeps the place.
 
 ## Inline Capture on Intake Page
 

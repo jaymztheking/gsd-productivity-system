@@ -32,6 +32,8 @@ interface TaskCardProps {
     }
   ) => void;
   onCreateProject: (name: string, description?: string) => Promise<Project>;
+  /** Grip shown at the left of the card, when the list is sortable */
+  dragHandle?: React.ReactNode;
 }
 
 function tagsByCategoryOf(
@@ -56,6 +58,7 @@ export default function TaskCard({
   onComplete,
   onUpdate,
   onCreateProject,
+  dragHandle,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [title, setTitle] = useState(action.title);
@@ -122,6 +125,7 @@ export default function TaskCard({
         onClick={toggleEditor}
         style={{ cursor: "pointer" }}
       >
+        {dragHandle}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="row gap-sm" style={{ flexWrap: "wrap" }}>
             <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>

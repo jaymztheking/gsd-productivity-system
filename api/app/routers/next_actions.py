@@ -8,6 +8,7 @@ from app.crud.next_actions import (
     delete_next_action,
     get_next_action,
     list_next_actions,
+    reorder_engage,
     update_next_action,
 )
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.models.enums import ActionStatus
 from app.schemas.next_action import (
     NextActionCreate,
     NextActionOut,
+    NextActionReorder,
     NextActionUpdate,
 )
 
@@ -35,6 +37,13 @@ async def post_next_action(
     data: NextActionCreate, session: AsyncSession = Depends(get_db)
 ):
     return await create_next_action(session, data)
+
+
+@router.put("/next-actions/order", status_code=204)
+async def put_engage_order(
+    data: NextActionReorder, session: AsyncSession = Depends(get_db)
+):
+    await reorder_engage(session, data.ordered_ids)
 
 
 @router.patch("/next-actions/{action_id}", response_model=NextActionOut)

@@ -439,8 +439,15 @@ PATCH  /projects/:id/links/:link_id          — update link
 DELETE /projects/:id/links/:link_id          — remove link
 PUT    /projects/:id/links/order             — reorder links
 
-GET    /next-actions                         — list (filter: ?status=active&tag_ids=uuid1&tag_ids=uuid2)
-POST   /next-actions                         — create
+GET    /areas                                — areas of focus in display order
+POST   /areas                                — create ({name}; 409 if the name exists)
+PATCH  /areas/:id                            — rename
+DELETE /areas/:id                            — delete (unassigns its tasks and projects)
+PUT    /areas/order                          — set display order (every area once)
+
+GET    /next-actions                         — list (filter: ?status=active&tag_ids=uuid1&tag_ids=uuid2; active/pending in Engage order)
+POST   /next-actions                         — create (active/pending go to the bottom of Engage)
+PUT    /next-actions/order                   — reorder Engage; a subset keeps every other task in place
 PATCH  /next-actions/:id                     — update
 DELETE /next-actions/:id                     — soft delete (sets deleted_at)
 

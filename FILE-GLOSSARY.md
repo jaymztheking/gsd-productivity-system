@@ -65,6 +65,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `alembic/versions/001_create_tables.py` | Creates all 4 tables: `tags`, `projects`, `next_actions`, `next_action_tags`. Defines Postgres enum types (`action_status`, `project_status`, `tag_category`). Creates indexes on `status`, `project_id`, and junction table FKs. |
 | `alembic/versions/002_seed_tags.py` | Inserts the 13 seed tags (4 context, 5 time, 4 energy) using deterministic UUIDs via `uuid5` for cross-environment consistency. |
 | `alembic/versions/006_routine.py` | Creates `routine_items` (title, weekday bitmask, sort order, local `created_on`, soft delete) and `routine_completions` (item + local date, composite PK). |
+| `alembic/versions/009_engage_sort_order.py` | Adds `next_actions.engage_sort_order`, backfilled oldest-first for open (active/pending, not deleted) items so Engage starts in its previous order. |
 | `alembic/versions/008_areas.py` | Creates `areas` and adds an indexed, nullable `area_id` (ON DELETE SET NULL) to `next_actions` and `projects`. |
 | `alembic/versions/007_someday_status.py` | Adds `someday` to the `action_status` enum (in an autocommit block, since Postgres cannot use a new enum value in the same transaction), moves open items tagged `#someday` to that status, and deletes the `#someday` tag. |
 
@@ -98,7 +99,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/crud/__init__.py` | Empty package init. |
 | `app/crud/tags.py` | `list_tags()` — select all, ordered by category then name. |
 | `app/crud/projects.py` | `list_projects()`, `get_project()`, `create_project()`, `update_project()`. |
-| `app/crud/next_actions.py` | The most complex module. `list_next_actions()` implements AND-filter via `JOIN + GROUP BY + HAVING COUNT`. `create_next_action()` and `update_next_action()` handle tag association. `update_next_action()` manages `completed_at` timestamp on status transitions. |
+| `app/crud/next_actions.py` | The most complex module. `list_next_actions()` implements AND-filter via `JOIN + GROUP BY + HAVING COUNT`. `create_next_action()` and `update_next_action()` handle tag association. `update_next_action()` manages `completed_at` timestamp on status transitions, places tasks entering active/pending at the bottom of the Engage order, and applies project-area defaulting. `reorder_engage()` rearranges a subset of active+pending tasks within the slots they occupy, so tasks hidden by filters or other area columns keep their places. |
 | `app/crud/areas.py` | Area CRUD in display order (new areas go last), full-list reorder, delete that unassigns tasks and projects, duplicate names as 409, and `require_area()` used by task and project writes to reject unknown area IDs with 422. |
 | `app/crud/routine.py` | Routine queries: today's scheduled items with tick state, CRUD with soft delete, subset reorder that keeps other items' slots, idempotent tick/untick, history by date range (includes deleted items with completions). |
 
@@ -109,7 +110,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/routers/__init__.py` | Empty package init. |
 | `app/routers/tags.py` | `GET /tags` — returns all tags for UI dropdowns/toggles. |
 | `app/routers/projects.py` | `GET /projects`, `POST /projects` (201), `PATCH /projects/:id`. 404 on missing project. |
-| `app/routers/next_actions.py` | `GET /next-actions` (with `status` and `tag_ids` query params), `POST /next-actions` (201), `PATCH /next-actions/:id`, `DELETE /next-actions/:id` (204). 404 on missing action. |
+| `app/routers/next_actions.py` | `GET /next-actions` (with `status` and `tag_ids` query params), `POST /next-actions` (201), `PATCH /next-actions/:id`, `PUT /next-actions/order` (204; 422 for duplicate, unknown or non-open IDs), `DELETE /next-actions/:id` (204). 404 on missing action. |
 | `app/routers/areas.py` | `/areas` endpoints (list, create, rename, delete, `PUT /areas/order`). |
 | `app/routers/routine.py` | `/routine/*` endpoints (today, items CRUD, order, completion, history). Rejects ticks for a date other than local today with 409. |
 
@@ -133,7 +134,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `Dockerfile` | Production multi-stage build: stage 1 (`node:20-alpine`) installs deps and builds; stage 2 (`nginx:alpine`) serves the static bundle. |
 | `Dockerfile.dev` | Dev image: `node:20-alpine`, installs deps, runs `npm run dev` with Vite's HMR. |
 | `.dockerignore` | Excludes `node_modules`, `dist`, `.git` from Docker build context. |
-| `package.json` | Dependencies: React 19, React Router 7, Vite 6, TypeScript 5.7. Scripts: `dev`, `build`, `preview`. |
+| `package.json` | Dependencies: React 19, React Router 7, dnd-kit (drag-to-reorder in Engage, pinned exact versions), Vite 6, TypeScript 5.7. Scripts: `dev`, `build`, `preview`. |
 | `package-lock.json` | Lockfile for deterministic installs. |
 | `tsconfig.json` | Root TypeScript config. References `tsconfig.app.json` and `tsconfig.node.json`. |
 | `tsconfig.app.json` | TypeScript config for app source (`src/`). Targets ES2020, JSX react-jsx, strict mode. |
@@ -194,7 +195,8 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 
 | File | Purpose |
 |------|---------|
-| `src/pages/EngagePage.tsx` | The core product. Manages filter state (one tag per category + show-pending toggle). Fetches active actions (and optionally pending) filtered by selected tags. Handles optimistic completion (card removed immediately, rollback on API failure). |
+| `src/pages/EngagePage.tsx` | The core product. Manages filter state (one tag per category + show-pending toggle). Fetches active actions (and optionally pending) filtered by selected tags, shown in the shared manual order. Cards are dragged by their grip (dnd-kit, pointer and keyboard sensors); a drop saves the shown tasks' new order with `PUT /next-actions/order` and reloads on failure. Handles optimistic completion (card removed immediately, rollback on API failure). |
+| `src/pages/SortableTaskCard.tsx` | Wraps `TaskCard` with dnd-kit's `useSortable` and gives it a ⠿ grip as the only drag activator, so tapping the card still opens the editor and swiping still scrolls. The grip sets `touch-action: none`. |
 | `src/pages/FilterPanel.tsx` | Three rows of tag toggle buttons (context, energy, time) plus a show-pending toggle switch. Selected buttons get filled background in their category color. All taps are large (44px+). |
 | `src/pages/TaskCard.tsx` | Individual task row. Collapsed: title, tag badges, project name, notes preview, completion circle button. Pending items have amber left border and "Pending" label. Expanded (on tap): full edit form with title, notes, tag selectors, project selector, status select (active, pending, or someday, which removes it from Engage). Completion animates the card off-screen. |
 

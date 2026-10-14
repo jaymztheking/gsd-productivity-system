@@ -61,6 +61,8 @@ export interface NextAction {
   completed_at: string | null;
   deleted_at: string | null;
   project_sort_order: number;
+  /** Position in Engage, one order shared by active and pending tasks */
+  engage_sort_order: number;
 }
 
 /** 0 = Monday ... 6 = Sunday, matching the API */

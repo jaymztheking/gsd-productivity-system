@@ -226,6 +226,14 @@ export function updateNextAction(
   });
 }
 
+/** Reorder the tasks Engage shows; tasks left out keep their places. */
+export function reorderNextActions(orderedIds: string[]): Promise<void> {
+  return request("/next-actions/order", {
+    method: "PUT",
+    body: JSON.stringify({ ordered_ids: orderedIds }),
+  });
+}
+
 export function deleteNextAction(id: string): Promise<void> {
   return request(`/next-actions/${id}`, { method: "DELETE" });
 }

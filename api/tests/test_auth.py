@@ -61,6 +61,7 @@ def client(monkeypatch):
             "completed_at": None,
             "deleted_at": None,
             "project_sort_order": 0,
+            "engage_sort_order": 0,
         }
 
     monkeypatch.setattr("app.routers.tags.list_tags", fake_list_tags)

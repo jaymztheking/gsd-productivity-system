@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +12,9 @@ from app.models.next_action import NextAction, next_action_tags
 from app.models.project import Project
 from app.models.tag import Tag
 from app.schemas.next_action import NextActionCreate, NextActionUpdate
+
+# The statuses shown in Engage, which share one manual order
+OPEN_STATUSES = (ActionStatus.active, ActionStatus.pending)
 
 
 async def list_next_actions(
@@ -32,7 +36,13 @@ async def list_next_actions(
             .having(func.count(next_action_tags.c.tag_id) == len(tag_ids))
         )
 
-    stmt = stmt.order_by(NextAction.created_at.asc())
+    if status in OPEN_STATUSES:
+        stmt = stmt.order_by(
+            NextAction.engage_sort_order.asc(), NextAction.created_at.asc()
+        )
+    else:
+        # Intake works through the inbox oldest first
+        stmt = stmt.order_by(NextAction.created_at.asc())
     stmt = stmt.options(
         selectinload(NextAction.tags),
         selectinload(NextAction.project),
@@ -74,6 +84,9 @@ async def create_next_action(
         area_id=area_id,
     )
 
+    if action.status in OPEN_STATUSES:
+        action.engage_sort_order = await _bottom_of_engage(session)
+
     # Attach tags if provided
     if data.tag_ids:
         tags = await _fetch_tags(session, data.tag_ids)
@@ -100,6 +113,10 @@ async def update_next_action(
         elif action.status == ActionStatus.complete:
             # Moving away from complete — clear completed_at
             action.completed_at = None
+        # Arriving in Engage puts the task at the bottom of the order.
+        # Switching between active and pending keeps its place.
+        if data.status in OPEN_STATUSES and action.status not in OPEN_STATUSES:
+            action.engage_sort_order = await _bottom_of_engage(session)
         action.status = data.status
 
     if data.project_id is not None and data.project_id != action.project_id:
@@ -132,6 +149,55 @@ async def delete_next_action(
     """Soft delete — sets deleted_at instead of removing the row."""
     action.deleted_at = datetime.utcnow()
     await session.commit()
+
+
+async def reorder_engage(session: AsyncSession, ordered_ids: list[UUID]) -> None:
+    """Reorder some or all of the tasks shown in Engage.
+
+    Engage usually shows a subset (filtered by tags, or one area column), so
+    it sends only the tasks it shows. They are rearranged within the
+    positions they already occupy, and every other open task keeps its place
+    and relative order. The whole order is then renumbered densely.
+    """
+    stmt = (
+        select(NextAction)
+        .where(
+            NextAction.deleted_at.is_(None),
+            NextAction.status.in_(OPEN_STATUSES),
+        )
+        .order_by(NextAction.engage_sort_order, NextAction.created_at)
+    )
+    tasks = list((await session.execute(stmt)).scalars().all())
+    by_id = {t.id: t for t in tasks}
+
+    if (
+        not ordered_ids
+        or len(set(ordered_ids)) != len(ordered_ids)
+        or any(i not in by_id for i in ordered_ids)
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="ordered_ids must be distinct active or pending tasks",
+        )
+
+    wanted = set(ordered_ids)
+    slots = [idx for idx, t in enumerate(tasks) if t.id in wanted]
+    for slot, task_id in zip(slots, ordered_ids):
+        tasks[slot] = by_id[task_id]
+
+    for idx, task in enumerate(tasks):
+        task.engage_sort_order = idx
+    await session.commit()
+
+
+async def _bottom_of_engage(session: AsyncSession) -> int:
+    last = await session.scalar(
+        select(func.max(NextAction.engage_sort_order)).where(
+            NextAction.deleted_at.is_(None),
+            NextAction.status.in_(OPEN_STATUSES),
+        )
+    )
+    return 0 if last is None else last + 1
 
 
 async def _project_area(

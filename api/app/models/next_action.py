@@ -54,6 +54,11 @@ class NextAction(Base):
     project_sort_order: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default="0"
     )
+    # Position in Engage, shared by active and pending items. Filters and
+    # area columns show subsets of this one order.
+    engage_sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
 
     # Relationships
     tags = relationship("Tag", secondary=next_action_tags, lazy="selectin")

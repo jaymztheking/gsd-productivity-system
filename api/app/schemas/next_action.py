@@ -28,6 +28,10 @@ class NextActionUpdate(BaseModel):
     tag_ids: list[UUID] | None = None
 
 
+class NextActionReorder(BaseModel):
+    ordered_ids: list[UUID]
+
+
 class NextActionOut(BaseModel):
     id: UUID
     title: str
@@ -42,5 +46,6 @@ class NextActionOut(BaseModel):
     completed_at: datetime | None
     deleted_at: datetime | None
     project_sort_order: int
+    engage_sort_order: int
 
     model_config = {"from_attributes": True}

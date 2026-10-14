@@ -1,6 +1,22 @@
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchNextActions,
+  reorderNextActions,
   updateNextAction,
 } from "../api/client";
 import { useAreas } from "../hooks/useAreas";
@@ -8,7 +24,7 @@ import { useProjects } from "../hooks/useProjects";
 import { useTags } from "../hooks/useTags";
 import type { NextAction, Project, TagCategory } from "../types/models";
 import FilterPanel from "./FilterPanel";
-import TaskCard from "./TaskCard";
+import SortableTaskCard from "./SortableTaskCard";
 
 export default function EngagePage() {
   const { tagsByCategory, loading: tagsLoading } = useTags();
@@ -49,8 +65,12 @@ export default function EngagePage() {
           activePromise,
           pendingPromise,
         ]);
-        // Active first, then pending
-        setActions([...activeItems, ...pendingItems]);
+        // Active and pending share one manual order
+        setActions(
+          [...activeItems, ...pendingItems].sort(
+            (a, b) => a.engage_sort_order - b.engage_sort_order
+          )
+        );
       } else {
         const activeItems = await activePromise;
         setActions(activeItems);
@@ -64,6 +84,27 @@ export default function EngagePage() {
   useEffect(() => {
     loadActions();
   }, [loadActions]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = actions.findIndex((a) => a.id === active.id);
+    const to = actions.findIndex((a) => a.id === over.id);
+    const reordered = arrayMove(actions, from, to);
+    setActions(reordered);
+    try {
+      // Only the shown tasks are sent; ones hidden by filters keep their places
+      await reorderNextActions(reordered.map((a) => a.id));
+    } catch {
+      loadActions();
+    }
+  };
 
   const handleTagToggle = (category: TagCategory, tagId: string | null) => {
     setSelectedTags((prev) => ({ ...prev, [category]: tagId }));
@@ -126,20 +167,31 @@ export default function EngagePage() {
           </p>
         </div>
       ) : (
-        <div className="stack stack--sm">
-          {actions.map((action) => (
-            <TaskCard
-              key={action.id}
-              action={action}
-              tagsByCategory={tagsByCategory}
-              projects={projects}
-              areas={areas}
-              onComplete={handleComplete}
-              onUpdate={handleUpdate}
-              onCreateProject={handleCreateProject}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={actions.map((a) => a.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="stack stack--sm">
+              {actions.map((action) => (
+                <SortableTaskCard
+                  key={action.id}
+                  action={action}
+                  tagsByCategory={tagsByCategory}
+                  projects={projects}
+                  areas={areas}
+                  onComplete={handleComplete}
+                  onUpdate={handleUpdate}
+                  onCreateProject={handleCreateProject}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );
