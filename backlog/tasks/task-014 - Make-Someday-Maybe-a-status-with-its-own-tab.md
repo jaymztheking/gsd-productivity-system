@@ -1,9 +1,11 @@
 ---
 id: TASK-014
 title: Make Someday/Maybe a status with its own tab
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@James'
 created_date: '2026-10-13 01:47'
+updated_date: '2026-10-14 01:34'
 labels:
   - ui
   - api
@@ -36,3 +38,16 @@ Someday/Maybe is currently modelled as active next actions tagged `#someday`, wh
 - [ ] #6 The weekly digest Someday/Maybe section is built from the someday status, and nothing tagged otherwise leaks into it
 - [ ] #7 DECISIONS.md, README.md and the digest pipeline tests are updated to describe someday as a status
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Add someday to ActionStatus; Alembic migration 007 adds the enum value, moves active/pending/inbox items tagged #someday to status someday, deletes the #someday tag (downgrade restores tag, re-tags someday items and sets them active)
+2. API: no special casing needed beyond the enum; GET /next-actions?status=someday serves the tab and digest
+3. MCP server: add someday to the status enum
+4. UI: add someday to ActionStatus type; new Someday tab/page listing someday items with Promote (to active) and Delete; Intake gets a 'Someday' button that files the item as someday with optional title/notes
+5. Engage already only fetches active/pending, so someday items drop out automatically; verify
+6. n8n digest: add Fetch Someday Items node (status=someday), build Someday/Maybe section from it, remove tag-based filter
+7. Tests: API test for someday status (create, list, promote, excluded from active); update digest pipeline tests to use status
+8. Docs: revise DECISIONS.md entry, README tag table and status list, FILE-GLOSSARY digest description
+<!-- SECTION:PLAN:END -->
