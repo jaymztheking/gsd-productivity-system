@@ -5,6 +5,7 @@ import IntakePage from "./pages/IntakePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import RoutinePage from "./pages/RoutinePage";
+import SomedayPage from "./pages/SomedayPage";
 import "./styles/index.css";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" element={<Navigate to="/engage" replace />} />
           <Route path="/engage" element={<EngagePage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/someday" element={<SomedayPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/routine" element={<RoutinePage />} />

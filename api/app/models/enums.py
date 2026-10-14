@@ -5,6 +5,7 @@ class ActionStatus(str, enum.Enum):
     inbox = "inbox"
     active = "active"
     pending = "pending"
+    someday = "someday"
     complete = "complete"
 
 

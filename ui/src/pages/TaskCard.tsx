@@ -14,7 +14,7 @@ interface TaskCardProps {
     data: {
       title?: string;
       notes?: string | null;
-      status?: "active" | "pending";
+      status?: "active" | "pending" | "someday";
       tag_ids?: string[];
       project_id?: string | null;
     }
@@ -51,7 +51,9 @@ export default function TaskCard({
     tagsByCategoryOf(action)
   );
   const [projectId, setProjectId] = useState(action.project_id);
-  const [status, setStatus] = useState(action.status as "active" | "pending");
+  const [status, setStatus] = useState(
+    action.status as "active" | "pending" | "someday"
+  );
   const [exiting, setExiting] = useState(false);
 
   // Re-seed the editor from the action each time it opens, so it always
@@ -63,7 +65,7 @@ export default function TaskCard({
       setNotes(action.notes ?? "");
       setSelectedTags(tagsByCategoryOf(action));
       setProjectId(action.project_id);
-      setStatus(action.status as "active" | "pending");
+      setStatus(action.status as "active" | "pending" | "someday");
     }
     setExpanded(!expanded);
   };
@@ -222,12 +224,13 @@ export default function TaskCard({
               className="project-selector__select"
               value={status}
               onChange={(e) =>
-                setStatus(e.target.value as "active" | "pending")
+                setStatus(e.target.value as "active" | "pending" | "someday")
               }
               style={{ width: "auto", flex: 1 }}
             >
               <option value="active">Active</option>
               <option value="pending">Pending</option>
+              <option value="someday">Someday</option>
             </select>
           </div>
           <div className="intake-actions">

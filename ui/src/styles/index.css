@@ -767,6 +767,13 @@ body {
   gap: 0.5rem;
 }
 
+/* Four triage choices do not fit one row at phone width */
+.intake-triage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 .intake-form {
   display: flex;
   flex-direction: column;

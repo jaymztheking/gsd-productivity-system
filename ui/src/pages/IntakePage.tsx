@@ -40,6 +40,11 @@ export default function IntakePage() {
     removeFromList(id);
   };
 
+  const handleSomeday = async (id: string) => {
+    await updateNextAction(id, { status: "someday" });
+    removeFromList(id);
+  };
+
   const handleMakeTask = async (
     id: string,
     data: {
@@ -112,6 +117,7 @@ export default function IntakePage() {
             tagsByCategory={tagsByCategory}
             projects={projects}
             onIgnore={handleIgnore}
+            onSomeday={handleSomeday}
             onMakeTask={handleMakeTask}
             onMakeProject={(name, description) =>
               handleMakeProject(actions[0].id, name, description)

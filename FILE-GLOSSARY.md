@@ -65,13 +65,14 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `alembic/versions/001_create_tables.py` | Creates all 4 tables: `tags`, `projects`, `next_actions`, `next_action_tags`. Defines Postgres enum types (`action_status`, `project_status`, `tag_category`). Creates indexes on `status`, `project_id`, and junction table FKs. |
 | `alembic/versions/002_seed_tags.py` | Inserts the 13 seed tags (4 context, 5 time, 4 energy) using deterministic UUIDs via `uuid5` for cross-environment consistency. |
 | `alembic/versions/006_routine.py` | Creates `routine_items` (title, weekday bitmask, sort order, local `created_on`, soft delete) and `routine_completions` (item + local date, composite PK). |
+| `alembic/versions/007_someday_status.py` | Adds `someday` to the `action_status` enum (in an autocommit block, since Postgres cannot use a new enum value in the same transaction), moves open items tagged `#someday` to that status, and deletes the `#someday` tag. |
 
 ### Models (ORM)
 
 | File | Purpose |
 |------|---------|
 | `app/models/__init__.py` | Defines the SQLAlchemy `DeclarativeBase` class. Imports all models so Alembic can discover them. |
-| `app/models/enums.py` | Python string enums: `ActionStatus` (inbox/active/pending/complete), `ProjectStatus` (active/complete), `TagCategory` (context/time/energy). Used by both ORM models and Pydantic schemas. |
+| `app/models/enums.py` | Python string enums: `ActionStatus` (inbox/active/pending/someday/complete), `ProjectStatus` (active/complete), `TagCategory` (context/time/energy). Used by both ORM models and Pydantic schemas. |
 | `app/models/tag.py` | `Tag` ORM model: `id` (UUID PK), `name` (unique text), `category` (enum). |
 | `app/models/project.py` | `Project` ORM model: `id`, `name`, `status`, `index_notes`, timestamps. Has `next_actions` relationship. |
 | `app/models/next_action.py` | `NextAction` ORM model: `id`, `title`, `notes`, `status`, `project_id` (FK), timestamps, `completed_at`. Defines the `next_action_tags` junction table. Has `tags` and `project` relationships with `selectin` eager loading. |
@@ -168,7 +169,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 
 | File | Purpose |
 |------|---------|
-| `src/components/Layout.tsx` | App shell with sticky top nav. `NavLink` tabs (Engage, Intake, Projects, Routine) with active state styling. Renders child routes via `<Outlet />`. |
+| `src/components/Layout.tsx` | App shell with sticky top nav. `NavLink` tabs (Engage, Intake, Someday, Projects, Routine) with active state styling. Renders child routes via `<Outlet />`. |
 | `src/components/TagBadge.tsx` | Colored pill displaying a tag name. Color determined by category (blue=context, amber=time, green=energy) via CSS custom property. |
 | `src/components/TagSelector.tsx` | Radio-style button group for selecting one tag per category. Tapping the active tag deselects it. Used in both Intake (triage) and Engage (filtering). |
 | `src/components/ProjectSelector.tsx` | Dropdown for project assignment. Lists active projects, "None" option, and "+ New Project..." which expands inline fields for name and index notes. |
@@ -178,7 +179,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | File | Purpose |
 |------|---------|
 | `src/pages/IntakePage.tsx` | Inbox processing queue. Fetches `status=inbox` items oldest-first. Displays one item at a time via `IntakeCard`. Shows remaining count. "Inbox Zero" empty state when done. |
-| `src/pages/IntakeCard.tsx` | Single inbox item with three actions: **Ignore** (delete), **Make Task** (expand to edit title, notes, tags, project, then save as active), **Make Project** (expand to create project and remove inbox item). Expanded states are mutually exclusive. |
+| `src/pages/IntakeCard.tsx` | Single inbox item with four actions: **Ignore** (delete), **Someday** (file to Someday/Maybe as is), **Make Task** (expand to edit title, notes, tags, project, then save as active), **Make Project** (expand to create project and remove inbox item). Expanded states are mutually exclusive. |
 
 ### Pages — Engage
 
@@ -186,12 +187,13 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 |------|---------|
 | `src/pages/EngagePage.tsx` | The core product. Manages filter state (one tag per category + show-pending toggle). Fetches active actions (and optionally pending) filtered by selected tags. Handles optimistic completion (card removed immediately, rollback on API failure). |
 | `src/pages/FilterPanel.tsx` | Three rows of tag toggle buttons (context, energy, time) plus a show-pending toggle switch. Selected buttons get filled background in their category color. All taps are large (44px+). |
-| `src/pages/TaskCard.tsx` | Individual task row. Collapsed: title, tag badges, project name, notes preview, completion circle button. Pending items have amber left border and "Pending" label. Expanded (on tap): full edit form with title, notes, tag selectors, project selector, status toggle. Completion animates the card off-screen. |
+| `src/pages/TaskCard.tsx` | Individual task row. Collapsed: title, tag badges, project name, notes preview, completion circle button. Pending items have amber left border and "Pending" label. Expanded (on tap): full edit form with title, notes, tag selectors, project selector, status select (active, pending, or someday, which removes it from Engage). Completion animates the card off-screen. |
 
 ### Pages — Routine
 
 | File | Purpose |
 |------|---------|
+| `src/pages/SomedayPage.tsx` | Someday/Maybe list. Fetches `status=someday` items; each can be made active (moves it to Engage) or deleted. |
 | `src/pages/RoutinePage.tsx` | Daily routine. **Today** view: checklist of items scheduled for the current weekday, crossed off when ticked, with progress bar. **Edit** view: weekday filter, add form with day picker, per-item editor (rename, reschedule, two-step delete), up/down reorder within the filtered list. |
 
 ### Styles
@@ -209,6 +211,6 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | File | Purpose |
 |------|---------|
 | `workflows/inbox-capture.json` | n8n workflow definition. Webhook node (POST `/capture`) receives `{ "title": "..." }` and HTTP Request node forwards it to `POST http://api:8000/next-actions` with `status: "inbox"`. Import into n8n UI to activate. |
-| `workflows/weekly-digest.json` | n8n workflow definition. Schedule trigger (Sunday 7pm) fires 4 parallel HTTP requests to the API (inbox, active, pending, projects). Code node compiles an HTML digest covering unprocessed inbox items, stale actions (7+ days untouched), pending items, someday items, and projects without next actions. Email Send node delivers via SMTP. |
+| `workflows/weekly-digest.json` | n8n workflow definition. Schedule trigger (Sunday 7pm) fires 5 HTTP requests to the API (inbox, active, pending, someday, projects). Code node compiles an HTML digest covering unprocessed inbox items, stale actions (7+ days untouched), pending items, someday items, and projects without next actions. Email Send node delivers via SMTP. |
 
 The n8n instance itself is defined in `k8s/n8n/` (namespace `n8n`): `namespace.yaml`, `deployment.yaml` (image pinned by tag and digest), `service.yaml`, `ingress.yaml` (`n8n.home.lab`), `pvc.yaml`, and `secret.yaml.example` (key names for `n8n-secrets`; the real Secret is created by hand).

@@ -23,6 +23,14 @@ export default function Layout() {
             Intake
           </NavLink>
           <NavLink
+            to="/someday"
+            className={({ isActive }) =>
+              `nav-tab ${isActive ? "nav-tab--active" : ""}`
+            }
+          >
+            Someday
+          </NavLink>
+          <NavLink
             to="/projects"
             className={({ isActive }) =>
               `nav-tab ${isActive ? "nav-tab--active" : ""}`

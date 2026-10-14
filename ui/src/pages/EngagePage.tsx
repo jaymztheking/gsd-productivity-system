@@ -83,7 +83,11 @@ export default function EngagePage() {
     data: Parameters<typeof updateNextAction>[1]
   ) => {
     const updated = await updateNextAction(id, data);
-    setActions((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    setActions((prev) =>
+      updated.status === "someday"
+        ? prev.filter((a) => a.id !== id)
+        : prev.map((a) => (a.id === id ? updated : a))
+    );
   };
 
   const handleCreateProject = async (

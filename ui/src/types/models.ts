@@ -1,4 +1,9 @@
-export type ActionStatus = "inbox" | "active" | "pending" | "complete";
+export type ActionStatus =
+  | "inbox"
+  | "active"
+  | "pending"
+  | "someday"
+  | "complete";
 export type ProjectStatus = "active" | "complete";
 export type TagCategory = "context" | "time" | "energy";
 

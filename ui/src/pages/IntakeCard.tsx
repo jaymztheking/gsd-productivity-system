@@ -8,6 +8,7 @@ interface IntakeCardProps {
   tagsByCategory: Record<TagCategory, Tag[]>;
   projects: Project[];
   onIgnore: (id: string) => void;
+  onSomeday: (id: string) => void;
   onMakeTask: (
     id: string,
     data: {
@@ -30,6 +31,7 @@ export default function IntakeCard({
   tagsByCategory,
   projects,
   onIgnore,
+  onSomeday,
   onMakeTask,
   onMakeProject,
 }: IntakeCardProps) {
@@ -84,7 +86,7 @@ export default function IntakeCard({
       </div>
 
       {mode === "idle" && (
-        <div className="intake-actions">
+        <div className="intake-triage">
           <button
             className="btn btn--danger"
             onClick={() => onIgnore(action.id)}
@@ -92,9 +94,14 @@ export default function IntakeCard({
             Ignore
           </button>
           <button
+            className="btn btn--ghost"
+            onClick={() => onSomeday(action.id)}
+          >
+            Someday
+          </button>
+          <button
             className="btn btn--primary"
             onClick={() => setMode("task")}
-            style={{ flex: 1 }}
           >
             Make Task
           </button>

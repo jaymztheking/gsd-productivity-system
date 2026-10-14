@@ -13,7 +13,7 @@ Siri / Apple Watch ──> iOS Shortcut ──> n8n webhook ──> API ──> 
 
 - **Postgres 15** — single source of truth
 - **FastAPI** — async REST API, full CRUD + tag-based AND-filtering
-- **React + Vite** — single app serving Engage (filter + do), Intake (triage), and Projects (manage) routes
+- **React + Vite** — single app serving Engage (filter + do), Intake (triage), Someday (Someday/Maybe list), Projects (manage) and Routine routes
 - **n8n** — capture webhook + weekly review digest
 - **MCP server** (`mcp/`) — lets an MCP client (e.g. Claude) capture tasks and create projects over SSE at `mcp.gsd.home.lab`, LAN only
 
@@ -466,14 +466,14 @@ Auto-generated API docs: `http://localhost:8000/docs`
 | Category | Tags (ordered) |
 |----------|------|
 | Context  | @home, @online, @errands, @calls |
-| Time     | #now, #today, #week, #month, #someday |
+| Time     | #now, #today, #week, #month |
 | Energy   | +easy, +routine, +focused, +peak |
 
 Tags within time and energy categories are ordered by intensity (ordinal data). Context tags are alphabetical.
 
 ## Data Model
 
-- **next_actions** — the atomic unit. Status: inbox → active/pending → complete. Soft-deleted (preserves history).
+- **next_actions** — the atomic unit. Status: inbox → active/pending → complete, or inbox → someday (Someday/Maybe, not yet committed; promoted to active from the Someday tab). Soft-deleted (preserves history).
 - **tags** — first-class entities with sort_order. Joined via `next_action_tags`. AND-filter logic.
 - **projects** — container for related actions. Supports 2-level hierarchy (parent → sub-projects). Status: active → complete.
 - **project_links** — URL + label pairs attached to projects (JIRA-style references).

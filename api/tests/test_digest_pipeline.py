@@ -4,10 +4,10 @@ Creates real test data for each digest section, verifies it appears correctly,
 then cleans up.
 
 Run against live k3s:
-    API_URL=http://gsd.home.lab/api pytest api/tests/test_digest_pipeline.py -v
+    API_URL=http://gsd.home.lab/api API_TOKEN=... pytest api/tests/test_digest_pipeline.py -v
 
 Run against local dev:
-    pytest api/tests/test_digest_pipeline.py -v
+    API_TOKEN=... pytest api/tests/test_digest_pipeline.py -v
 """
 
 import os
@@ -15,11 +15,12 @@ import pytest
 import requests
 
 API_URL = os.getenv("API_URL", "http://localhost:8000")
+
+# Every request carries the API token (TASK-003)
+api = requests.Session()
+api.headers["X-API-Token"] = os.getenv("API_TOKEN", "")
 NEXT_ACTIONS = f"{API_URL}/next-actions"
 PROJECTS = f"{API_URL}/projects"
-
-# Tag IDs (seeded, stable)
-TAG_SOMEDAY = "9be1dbbc-1c0b-5c47-ac93-ae64bdbe7bdb"
 
 TEST_PREFIX = "[DIGEST-TEST]"
 
@@ -34,33 +35,33 @@ def create_action(title, status="inbox", tag_ids=None, project_id=None):
         payload["tag_ids"] = tag_ids
     if project_id:
         payload["project_id"] = project_id
-    resp = requests.post(NEXT_ACTIONS, json=payload)
+    resp = api.post(NEXT_ACTIONS, json=payload)
     resp.raise_for_status()
     return resp.json()
 
 
 def create_project(name):
-    resp = requests.post(PROJECTS, json={"name": f"{TEST_PREFIX} {name}"})
+    resp = api.post(PROJECTS, json={"name": f"{TEST_PREFIX} {name}"})
     resp.raise_for_status()
     return resp.json()
 
 
 def delete_action(id):
-    requests.delete(f"{NEXT_ACTIONS}/{id}")
+    api.delete(f"{NEXT_ACTIONS}/{id}")
 
 
 def delete_project(id):
-    requests.delete(f"{PROJECTS}/{id}")
+    api.delete(f"{PROJECTS}/{id}")
 
 
 def get_actions(status):
-    resp = requests.get(NEXT_ACTIONS, params={"status": status})
+    resp = api.get(NEXT_ACTIONS, params={"status": status})
     resp.raise_for_status()
     return resp.json()
 
 
 def get_projects(status="active"):
-    resp = requests.get(PROJECTS, params={"status": status})
+    resp = api.get(PROJECTS, params={"status": status})
     resp.raise_for_status()
     return resp.json()
 
@@ -69,7 +70,7 @@ def get_projects(status="active"):
 def cleanup_test_data():
     """Remove leftover test data before and after every test."""
     def _cleanup():
-        for status in ("inbox", "active", "pending"):
+        for status in ("inbox", "active", "pending", "someday"):
             for item in get_actions(status):
                 if item["title"].startswith(TEST_PREFIX):
                     delete_action(item["id"])
@@ -136,25 +137,26 @@ def test_pending_item_excluded_from_inbox_and_active():
 
 
 # ---------------------------------------------------------------------------
-# Someday / Maybe section (active items tagged #someday)
+# Someday / Maybe section (items with status someday)
 # ---------------------------------------------------------------------------
 
-def test_someday_item_appears_in_active_with_someday_tag():
-    item = create_action("someday idea", status="active", tag_ids=[TAG_SOMEDAY])
-    active = get_actions("active")
-    match = next((i for i in active if i["id"] == item["id"]), None)
-    assert match is not None, "Someday item not found in active endpoint"
-    tag_names = [t["name"] for t in match["tags"]]
-    assert "#someday" in tag_names, "#someday tag not present on item"
+def test_someday_item_appears_in_digest_someday_section():
+    item = create_action("someday idea", status="someday")
+    ids = [i["id"] for i in get_actions("someday")]
+    assert item["id"] in ids, "Someday item not found in someday endpoint"
 
 
-def test_active_item_without_someday_tag_not_in_someday_section():
+def test_someday_item_excluded_from_other_sections():
+    item = create_action("someday only", status="someday")
+    for status in ("inbox", "active", "pending"):
+        ids = [i["id"] for i in get_actions(status)]
+        assert item["id"] not in ids, f"Someday item leaked into {status}"
+
+
+def test_active_item_not_in_someday_section():
     item = create_action("regular active task", status="active")
-    active = get_actions("active")
-    match = next((i for i in active if i["id"] == item["id"]), None)
-    assert match is not None
-    tag_names = [t["name"] for t in match["tags"]]
-    assert "#someday" not in tag_names
+    ids = [i["id"] for i in get_actions("someday")]
+    assert item["id"] not in ids, "Active item leaked into someday"
 
 
 # ---------------------------------------------------------------------------

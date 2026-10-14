@@ -67,7 +67,7 @@ async def list_tools() -> list[types.Tool]:
             description=(
                 "Create a next-action with full control. "
                 "Use list_tags() and list_projects() first for valid UUIDs. "
-                "status: inbox | active | pending | complete."
+                "status: inbox | active | pending | someday | complete."
             ),
             inputSchema={
                 "type": "object",
@@ -76,7 +76,7 @@ async def list_tools() -> list[types.Tool]:
                     "notes": {"type": "string"},
                     "status": {
                         "type": "string",
-                        "enum": ["inbox", "active", "pending", "complete"],
+                        "enum": ["inbox", "active", "pending", "someday", "complete"],
                     },
                     "project_id": {"type": "string"},
                     "tag_ids": {"type": "array", "items": {"type": "string"}},

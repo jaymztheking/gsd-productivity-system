@@ -74,14 +74,16 @@ Tags are rows in a `tags` table joined via `next_action_tags`, not comma-separat
 - Tag taxonomy is enforced by the database (categories are a Postgres enum)
 - Adding new tags later is an Alembic migration, not a code change
 
-## `#someday` Is a Tag, Not a Status
+## Someday Is a Status, Not a Tag
 
-The spec explicitly calls this out: someday items are active next actions tagged `#someday`. There is no separate "someday" status because:
+Someday/Maybe was originally modelled as active next actions tagged `#someday`, one of the time-horizon tags. That was reversed in TASK-014 (October 2026), and `someday` is now a next-action status alongside inbox, active, pending and complete:
 
-- It keeps the status enum minimal (inbox, active, pending, complete)
-- Someday items still appear in the Engage UI when you filter by `#someday`
-- They participate in the weekly digest review
-- If something will never happen, delete it rather than giving it a special status
+- In GTD, Someday/Maybe is a separate list of things you are not committed to yet. A time-horizon tag said "later", not "not committed", so it was unclear what belonged in the digest's Someday/Maybe section
+- As `active` items, someday ideas showed up in Engage alongside real next actions
+- A status keeps them out of Engage without any filtering, gives them their own tab, and lets the weekly digest fetch them with `?status=someday`
+- Inbox items can be filed straight to someday from Intake, and promoted to active from the Someday tab during the weekly review
+
+Migration 007 moved open items tagged `#someday` to the new status and deleted the tag. Its downgrade restores the tag and moves the items back to active, but Postgres cannot drop an enum value, so `someday` remains in the `action_status` type.
 
 ## Pending Status vs. `@waiting` Tag
 
@@ -162,7 +164,7 @@ The React frontend was chosen specifically to ease this transition — React →
 
 ## Tag Ordering
 
-Time and energy tags are ordinal data (#now < #today < #week < #month < #someday, +easy < +routine < +focused < +peak). A `sort_order` integer column on the `tags` table enforces display order everywhere — filter panels, tag selectors, API responses. Context tags are alphabetical.
+Time and energy tags are ordinal data (#now < #today < #week < #month, +easy < +routine < +focused < +peak). A `sort_order` integer column on the `tags` table enforces display order everywhere — filter panels, tag selectors, API responses. Context tags are alphabetical.
 
 ## Project Hierarchy (Max 2 Levels)
 
