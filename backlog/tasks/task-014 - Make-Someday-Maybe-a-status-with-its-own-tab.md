@@ -1,11 +1,11 @@
 ---
 id: TASK-014
 title: Make Someday/Maybe a status with its own tab
-status: In Progress
+status: Done
 assignee:
   - '@James'
 created_date: '2026-10-13 01:47'
-updated_date: '2026-10-14 01:34'
+updated_date: '2026-10-14 01:41'
 labels:
   - ui
   - api
@@ -30,13 +30,13 @@ Someday/Maybe is currently modelled as active next actions tagged `#someday`, wh
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Someday exists as a next-action status alongside inbox, active, pending and complete, added by an Alembic migration
-- [ ] #2 Existing items tagged `#someday` are migrated to the someday status, and the `#someday` tag is retired so it no longer appears in tag pickers or filters
-- [ ] #3 Someday items do not appear in the Engage view
-- [ ] #4 A Someday tab lists all someday items, and each can be promoted to active or deleted from there
-- [ ] #5 An inbox item can be filed straight to someday from the Intake view
-- [ ] #6 The weekly digest Someday/Maybe section is built from the someday status, and nothing tagged otherwise leaks into it
-- [ ] #7 DECISIONS.md, README.md and the digest pipeline tests are updated to describe someday as a status
+- [x] #1 Someday exists as a next-action status alongside inbox, active, pending and complete, added by an Alembic migration
+- [x] #2 Existing items tagged `#someday` are migrated to the someday status, and the `#someday` tag is retired so it no longer appears in tag pickers or filters
+- [x] #3 Someday items do not appear in the Engage view
+- [x] #4 A Someday tab lists all someday items, and each can be promoted to active or deleted from there
+- [x] #5 An inbox item can be filed straight to someday from the Intake view
+- [x] #6 The weekly digest Someday/Maybe section is built from the someday status, and nothing tagged otherwise leaks into it
+- [x] #7 DECISIONS.md, README.md and the digest pipeline tests are updated to describe someday as a status
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -51,3 +51,24 @@ Someday/Maybe is currently modelled as active next actions tagged `#someday`, wh
 7. Tests: API test for someday status (create, list, promote, excluded from active); update digest pipeline tests to use status
 8. Docs: revise DECISIONS.md entry, README tag table and status list, FILE-GLOSSARY digest description
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Implemented on branch task-014-someday-status (commit c2312e8, plus bf16c45 syncing package-lock.json with @types/node, which npm ci needed).
+
+Verification, 2026-10-13:
+- Migration 007 against a throwaway postgres:15-alpine (same as k3s): upgrade moved an open #someday-tagged item to someday and kept its +easy tag, left a completed #someday item complete, deleted the tag; downgrade restored #someday on the item and set it active; re-upgrade clean. ALTER TYPE runs in an autocommit block because Postgres cannot use a new enum value in the transaction that added it. Downgrade leaves 'someday' in the enum (Postgres cannot drop enum values).
+- API: new tests/test_someday.py (4 tests) plus new shared conftest api_client fixture; full unit suite 65 passed.
+- Digest: test_digest_pipeline.py rewritten for the status and now sends X-API-Token (it had been unable to run since TASK-003); 12 passed against a local uvicorn on the Postgres container. Compile Digest JS executed in node against the local API data: Someday / Maybe section lists exactly the two someday items.
+- UI (Playwright, 375px viewport, Vite dev against the local API): Intake Someday button files the item and it appears on the Someday tab; Make Active moves it to Engage; someday items absent from Engage; Time Horizon picker shows #now..#month only. The four Intake triage buttons overflowed at 375px (scrollWidth 466), so they are now a 2x2 grid (scrollWidth 375).
+- Also: TaskCard status select gains Someday (removes the card from Engage); MCP create_task status enum includes someday.
+
+Not yet deployed: API/UI images, migration on k3s Postgres, MCP image, and re-import of weekly-digest.json into live n8n (needs an n8n restart afterwards per TASK-018 README note).
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Someday/Maybe is now a next-action status instead of the #someday time tag. Migration 007 adds the enum value, moves open #someday items to it and deletes the tag. A new Someday tab lists them with Make Active and Delete, Intake triage has a Someday button (triage buttons now a 2x2 grid to fit phones), and the Engage status select can send a task to Someday. The weekly digest fetches ?status=someday for its Someday/Maybe section. DECISIONS.md, README and FILE-GLOSSARY updated; digest pipeline tests rewritten for the status and fixed to send the API token. Verified with 65 API unit tests, 12 digest pipeline tests against Postgres 15, a migration up/down/up run on Postgres 15, the digest code executed in node, and a Playwright click-through at phone width. Deployment to k3s and the n8n re-import are still to do.
+<!-- SECTION:FINAL_SUMMARY:END -->
