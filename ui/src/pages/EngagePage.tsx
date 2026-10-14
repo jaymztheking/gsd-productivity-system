@@ -23,8 +23,21 @@ import { useAreas } from "../hooks/useAreas";
 import { useProjects } from "../hooks/useProjects";
 import { useTags } from "../hooks/useTags";
 import type { NextAction, Project, TagCategory } from "../types/models";
+import EngageBoard from "./EngageBoard";
 import FilterPanel from "./FilterPanel";
 import SortableTaskCard from "./SortableTaskCard";
+
+type ViewMode = "list" | "columns";
+const VIEW_KEY = "gsd.engage.view";
+
+// Remembered per browser; storage can be unavailable (private mode)
+function loadView(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "columns" ? "columns" : "list";
+  } catch {
+    return "list";
+  }
+}
 
 export default function EngagePage() {
   const { tagsByCategory, loading: tagsLoading } = useTags();
@@ -39,6 +52,7 @@ export default function EngagePage() {
     energy: null,
   });
   const [showPending, setShowPending] = useState(false);
+  const [view, setView] = useState<ViewMode>(loadView);
   const [actions, setActions] = useState<NextAction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,6 +120,30 @@ export default function EngagePage() {
     }
   };
 
+  const changeView = (next: ViewMode) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // Not remembered; the choice still applies until reload
+    }
+  };
+
+  const handleBoardDrop = async (
+    taskId: string,
+    newAreaId: string | null | undefined,
+    columnOrder: string[]
+  ) => {
+    try {
+      if (newAreaId !== undefined) {
+        await updateNextAction(taskId, { area_id: newAreaId });
+      }
+      await reorderNextActions(columnOrder);
+    } catch {
+      loadActions();
+    }
+  };
+
   const handleTagToggle = (category: TagCategory, tagId: string | null) => {
     setSelectedTags((prev) => ({ ...prev, [category]: tagId }));
   };
@@ -154,6 +192,20 @@ export default function EngagePage() {
         onPendingToggle={() => setShowPending((prev) => !prev)}
       />
 
+      <div className="view-switch" role="radiogroup" aria-label="Engage view">
+        {(["list", "columns"] as const).map((mode) => (
+          <button
+            key={mode}
+            role="radio"
+            aria-checked={view === mode}
+            className={`day-chip ${view === mode ? "day-chip--on" : ""}`}
+            onClick={() => changeView(mode)}
+          >
+            {mode === "list" ? "List" : "Columns by area"}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="loading">Loading tasks...</div>
       ) : actions.length === 0 ? (
@@ -166,6 +218,18 @@ export default function EngagePage() {
               : "Create some tasks to get started."}
           </p>
         </div>
+      ) : view === "columns" ? (
+        <EngageBoard
+          actions={actions}
+          areas={areas}
+          onActionsChange={setActions}
+          onDrop={handleBoardDrop}
+          tagsByCategory={tagsByCategory}
+          projects={projects}
+          onComplete={handleComplete}
+          onUpdate={handleUpdate}
+          onCreateProject={handleCreateProject}
+        />
       ) : (
         <DndContext
           sensors={sensors}

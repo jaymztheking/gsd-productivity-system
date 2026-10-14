@@ -13,7 +13,7 @@ Siri / Apple Watch ──> iOS Shortcut ──> n8n webhook ──> API ──> 
 
 - **Postgres 15** — single source of truth
 - **FastAPI** — async REST API, full CRUD + tag-based AND-filtering
-- **React + Vite** — single app serving Engage (filter + do), Intake (triage), Someday (Someday/Maybe list), Projects (manage) and Routine routes
+- **React + Vite** — single app serving Engage (filter + do; a drag-to-reorder list, or columns by area of focus), Intake (triage), Someday (Someday/Maybe list), Projects (manage) and Routine routes
 - **n8n** — capture webhook + weekly review digest
 - **MCP server** (`mcp/`) — lets an MCP client (e.g. Claude) capture tasks and create projects over SSE at `mcp.gsd.home.lab`, LAN only
 
