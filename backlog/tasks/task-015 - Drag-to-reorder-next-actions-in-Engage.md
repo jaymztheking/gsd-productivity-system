@@ -1,9 +1,11 @@
 ---
 id: TASK-015
 title: Drag to reorder next actions in Engage
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@James'
 created_date: '2026-10-13 01:47'
+updated_date: '2026-10-14 01:46'
 labels:
   - ui
   - api
@@ -32,3 +34,14 @@ James wants to put his next actions in his own priority order. The Engage list h
 - [ ] #4 Reordering while filters are applied does not scramble the relative order of tasks hidden by the filter
 - [ ] #5 Tests cover the reorder API, including invalid or partial ID lists
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Migration 009: engage_sort_order int on next_actions, backfilled for open items by created_at
+2. API: a task entering active or pending (on create or status change) is placed at the bottom (max+1). GET /next-actions orders active/pending by engage_sort_order then created_at; other statuses keep created_at (Intake stays oldest-first)
+3. PUT /next-actions/order {ordered_ids}: reorders a subset of open (active+pending) items within the slots they already occupy, then renumbers densely, so tasks hidden by filters or in other area columns keep their relative order; 422 for duplicates, unknown, deleted or non-open IDs, or an empty list
+4. UI: add dnd-kit (@dnd-kit/core, sortable, utilities, exact versions). Engage merges active+pending sorted by engage_sort_order; each TaskCard gets a grip handle (touch-action none) as the only drag activator so tapping a card still opens the editor; pointer + keyboard sensors; optimistic reorder, reload on failure
+5. Tests: API reorder tests (full, partial/filtered subset, invalid lists, bottom placement on create and activation, ordering of GET)
+6. Docs: revise DECISIONS 'Buttons over Drag-and-Drop' for Engage, README/FILE-GLOSSARY
+<!-- SECTION:PLAN:END -->
