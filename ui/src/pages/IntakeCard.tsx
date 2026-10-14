@@ -1,12 +1,22 @@
 import { useState } from "react";
+import AreaSelector, {
+  areaAfterProjectChange,
+} from "../components/AreaSelector";
 import ProjectSelector from "../components/ProjectSelector";
 import TagSelector from "../components/TagSelector";
-import type { NextAction, Project, Tag, TagCategory } from "../types/models";
+import type {
+  Area,
+  NextAction,
+  Project,
+  Tag,
+  TagCategory,
+} from "../types/models";
 
 interface IntakeCardProps {
   action: NextAction;
   tagsByCategory: Record<TagCategory, Tag[]>;
   projects: Project[];
+  areas: Area[];
   onIgnore: (id: string) => void;
   onSomeday: (id: string) => void;
   onMakeTask: (
@@ -16,6 +26,7 @@ interface IntakeCardProps {
       notes: string | null;
       tag_ids: string[];
       project_id: string | null;
+      area_id: string | null;
     }
   ) => void;
   onMakeProject: (
@@ -30,6 +41,7 @@ export default function IntakeCard({
   action,
   tagsByCategory,
   projects,
+  areas,
   onIgnore,
   onSomeday,
   onMakeTask,
@@ -46,6 +58,7 @@ export default function IntakeCard({
     energy: null,
   });
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [areaId, setAreaId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState(action.title);
   const [projectNotes, setProjectNotes] = useState("");
 
@@ -60,7 +73,13 @@ export default function IntakeCard({
       notes: notes.trim() || null,
       tag_ids,
       project_id: projectId,
+      area_id: areaId,
     });
+  };
+
+  const handleProjectSelect = (id: string | null) => {
+    setAreaId(areaAfterProjectChange(projects, projectId, id, areaId));
+    setProjectId(id);
   };
 
   const handleSaveProject = async () => {
@@ -154,12 +173,13 @@ export default function IntakeCard({
           <ProjectSelector
             projects={projects}
             selected={projectId}
-            onSelect={setProjectId}
+            onSelect={handleProjectSelect}
             onCreateNew={async (name, description) => {
               const p = await onMakeProject(name, description);
               return p;
             }}
           />
+          <AreaSelector areas={areas} selected={areaId} onSelect={setAreaId} />
           <div className="intake-actions">
             <button
               className="btn btn--ghost"

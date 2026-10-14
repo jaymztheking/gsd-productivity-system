@@ -5,8 +5,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.crud.areas import require_area
 from app.models.enums import ActionStatus
 from app.models.next_action import NextAction, next_action_tags
+from app.models.project import Project
 from app.models.tag import Tag
 from app.schemas.next_action import NextActionCreate, NextActionUpdate
 
@@ -58,11 +60,18 @@ async def get_next_action(
 async def create_next_action(
     session: AsyncSession, data: NextActionCreate
 ) -> NextAction:
+    if "area_id" in data.model_fields_set:
+        await require_area(session, data.area_id)
+        area_id = data.area_id
+    else:
+        area_id = await _project_area(session, data.project_id)
+
     action = NextAction(
         title=data.title,
         notes=data.notes,
         status=data.status,
         project_id=data.project_id,
+        area_id=area_id,
     )
 
     # Attach tags if provided
@@ -93,8 +102,15 @@ async def update_next_action(
             action.completed_at = None
         action.status = data.status
 
-    if data.project_id is not None:
+    if data.project_id is not None and data.project_id != action.project_id:
         action.project_id = data.project_id
+        # An unassigned task moved into a project takes the project's area
+        if action.area_id is None and "area_id" not in data.model_fields_set:
+            action.area_id = await _project_area(session, data.project_id)
+
+    if "area_id" in data.model_fields_set:
+        await require_area(session, data.area_id)
+        action.area_id = data.area_id
 
     # Update tags if provided (replace all). Assigning the collection lets
     # the ORM diff old against new; a raw DELETE first would leave the loaded
@@ -116,6 +132,15 @@ async def delete_next_action(
     """Soft delete — sets deleted_at instead of removing the row."""
     action.deleted_at = datetime.utcnow()
     await session.commit()
+
+
+async def _project_area(
+    session: AsyncSession, project_id: UUID | None
+) -> UUID | None:
+    if project_id is None:
+        return None
+    project = await session.get(Project, project_id)
+    return project.area_id if project else None
 
 
 async def _fetch_tags(

@@ -35,7 +35,7 @@ Every file in the project, organized by component and function.
 
 | File | Purpose |
 |------|---------|
-| `server.py` | MCP server exposing five tools (capture_to_inbox, list_tags, list_projects, create_task, create_project) over SSE or stdio. Calls the GSD API with the `X-API-Token` header from `API_TOKEN`. |
+| `server.py` | MCP server exposing six tools (capture_to_inbox, list_tags, list_areas, list_projects, create_task, create_project) over SSE or stdio. Calls the GSD API with the `X-API-Token` header from `API_TOKEN`. |
 | `requirements.txt` | Python dependencies: mcp, httpx, starlette, uvicorn. |
 | `Dockerfile` | Production image: `python:3.12-slim`, runs `server.py`. Published as `jaymztheking/gsd-mcp`. |
 
@@ -65,6 +65,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `alembic/versions/001_create_tables.py` | Creates all 4 tables: `tags`, `projects`, `next_actions`, `next_action_tags`. Defines Postgres enum types (`action_status`, `project_status`, `tag_category`). Creates indexes on `status`, `project_id`, and junction table FKs. |
 | `alembic/versions/002_seed_tags.py` | Inserts the 13 seed tags (4 context, 5 time, 4 energy) using deterministic UUIDs via `uuid5` for cross-environment consistency. |
 | `alembic/versions/006_routine.py` | Creates `routine_items` (title, weekday bitmask, sort order, local `created_on`, soft delete) and `routine_completions` (item + local date, composite PK). |
+| `alembic/versions/008_areas.py` | Creates `areas` and adds an indexed, nullable `area_id` (ON DELETE SET NULL) to `next_actions` and `projects`. |
 | `alembic/versions/007_someday_status.py` | Adds `someday` to the `action_status` enum (in an autocommit block, since Postgres cannot use a new enum value in the same transaction), moves open items tagged `#someday` to that status, and deletes the `#someday` tag. |
 
 ### Models (ORM)
@@ -76,6 +77,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/models/tag.py` | `Tag` ORM model: `id` (UUID PK), `name` (unique text), `category` (enum). |
 | `app/models/project.py` | `Project` ORM model: `id`, `name`, `status`, `index_notes`, timestamps. Has `next_actions` relationship. |
 | `app/models/next_action.py` | `NextAction` ORM model: `id`, `title`, `notes`, `status`, `project_id` (FK), timestamps, `completed_at`. Defines the `next_action_tags` junction table. Has `tags` and `project` relationships with `selectin` eager loading. |
+| `app/models/area.py` | `Area`: an area of focus (unique name, `sort_order`). Next actions and projects each have a nullable `area_id` (ON DELETE SET NULL). |
 | `app/models/routine.py` | `RoutineItem` (weekday bitmask exposed as `weekdays`, `is_scheduled_on()`) and `RoutineCompletion` (one row per item per local date ticked). |
 
 ### Schemas (Pydantic)
@@ -86,6 +88,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/schemas/tag.py` | `TagOut` response schema. |
 | `app/schemas/project.py` | `ProjectCreate`, `ProjectUpdate` request schemas. `ProjectOut` response schema. |
 | `app/schemas/next_action.py` | `NextActionCreate`, `NextActionUpdate` request schemas. `NextActionOut` response schema (includes nested `TagOut` and `ProjectOut`). |
+| `app/schemas/area.py` | Area create/rename (name stripped, non-empty), output, and reorder schemas. |
 | `app/schemas/routine.py` | Routine request/response schemas: item create/update (weekdays 0=Mon..6=Sun, validated non-empty), `RoutineToday`, completion toggle, reorder, history. |
 
 ### CRUD (Database Queries)
@@ -96,6 +99,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/crud/tags.py` | `list_tags()` — select all, ordered by category then name. |
 | `app/crud/projects.py` | `list_projects()`, `get_project()`, `create_project()`, `update_project()`. |
 | `app/crud/next_actions.py` | The most complex module. `list_next_actions()` implements AND-filter via `JOIN + GROUP BY + HAVING COUNT`. `create_next_action()` and `update_next_action()` handle tag association. `update_next_action()` manages `completed_at` timestamp on status transitions. |
+| `app/crud/areas.py` | Area CRUD in display order (new areas go last), full-list reorder, delete that unassigns tasks and projects, duplicate names as 409, and `require_area()` used by task and project writes to reject unknown area IDs with 422. |
 | `app/crud/routine.py` | Routine queries: today's scheduled items with tick state, CRUD with soft delete, subset reorder that keeps other items' slots, idempotent tick/untick, history by date range (includes deleted items with completions). |
 
 ### Routers (HTTP Endpoints)
@@ -106,6 +110,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `app/routers/tags.py` | `GET /tags` — returns all tags for UI dropdowns/toggles. |
 | `app/routers/projects.py` | `GET /projects`, `POST /projects` (201), `PATCH /projects/:id`. 404 on missing project. |
 | `app/routers/next_actions.py` | `GET /next-actions` (with `status` and `tag_ids` query params), `POST /next-actions` (201), `PATCH /next-actions/:id`, `DELETE /next-actions/:id` (204). 404 on missing action. |
+| `app/routers/areas.py` | `/areas` endpoints (list, create, rename, delete, `PUT /areas/order`). |
 | `app/routers/routine.py` | `/routine/*` endpoints (today, items CRUD, order, completion, history). Rejects ticks for a date other than local today with 409. |
 
 ### Application Entry
@@ -163,6 +168,7 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `src/hooks/useTags.ts` | Fetches all tags on mount. Returns `tags` array and `tagsByCategory` grouped record for easy rendering in selectors. |
 | `src/hooks/useProjects.ts` | Fetches projects on mount. Exposes `createProject()` for inline project creation. |
 | `src/hooks/useNextActions.ts` | Fetches next actions with optional `status` and `tag_ids` filters. Refetches when params change. Exposes `createAction`, `updateAction`, `deleteAction`, `removeFromList` for optimistic UI updates. |
+| `src/hooks/useAreas.ts` | Loads areas in display order; create, rename, delete, and up/down move with rollback on a failed reorder. |
 | `src/hooks/useRoutine.ts` | Loads today's checklist and all routine items. Optimistic tick with rollback; refetches at `next_reset_at`, on tab refocus, and on a 409 so the list resets at local midnight. |
 
 ### Shared Components
@@ -172,6 +178,9 @@ Manifests are in `k8s/mcp/` (deployment, service, and the `mcp.gsd.home.lab` ing
 | `src/components/Layout.tsx` | App shell with sticky top nav. `NavLink` tabs (Engage, Intake, Someday, Projects, Routine) with active state styling. Renders child routes via `<Outlet />`. |
 | `src/components/TagBadge.tsx` | Colored pill displaying a tag name. Color determined by category (blue=context, amber=time, green=energy) via CSS custom property. |
 | `src/components/TagSelector.tsx` | Radio-style button group for selecting one tag per category. Tapping the active tag deselects it. Used in both Intake (triage) and Engage (filtering). |
+| `src/components/AreaSelector.tsx` | Single-choice area chips (tap again to clear), plus `areaAfterProjectChange()`, which makes an editor's area follow the chosen project's area unless the user picked one by hand. |
+| `src/components/AreaManager.tsx` | Collapsible "Areas of focus" section on the Projects page: add, tap-to-rename, up/down reorder, two-step delete. |
+| `src/components/AreaBadge.tsx` | Purple badge showing an area's name on task cards and project list items. |
 | `src/components/ProjectSelector.tsx` | Dropdown for project assignment. Lists active projects, "None" option, and "+ New Project..." which expands inline fields for name and index notes. |
 
 ### Pages — Intake

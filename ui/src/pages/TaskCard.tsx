@@ -1,13 +1,24 @@
 import { useState } from "react";
+import AreaBadge from "../components/AreaBadge";
+import AreaSelector, {
+  areaAfterProjectChange,
+} from "../components/AreaSelector";
 import TagBadge from "../components/TagBadge";
 import TagSelector from "../components/TagSelector";
 import ProjectSelector from "../components/ProjectSelector";
-import type { NextAction, Project, Tag, TagCategory } from "../types/models";
+import type {
+  Area,
+  NextAction,
+  Project,
+  Tag,
+  TagCategory,
+} from "../types/models";
 
 interface TaskCardProps {
   action: NextAction;
   tagsByCategory: Record<TagCategory, Tag[]>;
   projects: Project[];
+  areas: Area[];
   onComplete: (id: string) => void;
   onUpdate: (
     id: string,
@@ -17,6 +28,7 @@ interface TaskCardProps {
       status?: "active" | "pending" | "someday";
       tag_ids?: string[];
       project_id?: string | null;
+      area_id?: string | null;
     }
   ) => void;
   onCreateProject: (name: string, description?: string) => Promise<Project>;
@@ -40,6 +52,7 @@ export default function TaskCard({
   action,
   tagsByCategory,
   projects,
+  areas,
   onComplete,
   onUpdate,
   onCreateProject,
@@ -51,6 +64,7 @@ export default function TaskCard({
     tagsByCategoryOf(action)
   );
   const [projectId, setProjectId] = useState(action.project_id);
+  const [areaId, setAreaId] = useState(action.area_id);
   const [status, setStatus] = useState(
     action.status as "active" | "pending" | "someday"
   );
@@ -65,6 +79,7 @@ export default function TaskCard({
       setNotes(action.notes ?? "");
       setSelectedTags(tagsByCategoryOf(action));
       setProjectId(action.project_id);
+      setAreaId(action.area_id);
       setStatus(action.status as "active" | "pending" | "someday");
     }
     setExpanded(!expanded);
@@ -83,9 +98,17 @@ export default function TaskCard({
       status,
       tag_ids,
       project_id: projectId,
+      area_id: areaId,
     });
     setExpanded(false);
   };
+
+  const handleProjectSelect = (id: string | null) => {
+    setAreaId(areaAfterProjectChange(projects, projectId, id, areaId));
+    setProjectId(id);
+  };
+
+  const area = areas.find((a) => a.id === action.area_id);
 
   const isPending = action.status === "pending";
 
@@ -121,6 +144,7 @@ export default function TaskCard({
             className="row gap-sm"
             style={{ flexWrap: "wrap", marginTop: "0.25rem" }}
           >
+            {area && <AreaBadge name={area.name} />}
             {action.tags.map((t) => (
               <TagBadge key={t.id} tag={t} />
             ))}
@@ -206,9 +230,10 @@ export default function TaskCard({
           <ProjectSelector
             projects={projects}
             selected={projectId}
-            onSelect={setProjectId}
+            onSelect={handleProjectSelect}
             onCreateNew={onCreateProject}
           />
+          <AreaSelector areas={areas} selected={areaId} onSelect={setAreaId} />
           <div className="row gap-sm">
             <label
               style={{

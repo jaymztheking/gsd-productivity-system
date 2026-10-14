@@ -53,6 +53,7 @@ def client(monkeypatch):
             "notes": None,
             "status": "inbox",
             "project_id": None,
+            "area_id": None,
             "tags": [],
             "project": None,
             "created_at": now,

@@ -55,6 +55,15 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
+            name="list_areas",
+            description=(
+                "Return all GSD areas of focus (e.g. home life, professional "
+                "development) with UUIDs, in display order. Call this before "
+                "assigning a task or project to an area."
+            ),
+            inputSchema={"type": "object", "properties": {}},
+        ),
+        types.Tool(
             name="list_projects",
             description=(
                 "Return all GSD projects with UUIDs and status. "
@@ -66,7 +75,9 @@ async def list_tools() -> list[types.Tool]:
             name="create_task",
             description=(
                 "Create a next-action with full control. "
-                "Use list_tags() and list_projects() first for valid UUIDs. "
+                "Use list_tags(), list_projects() and list_areas() first for "
+                "valid UUIDs. Without area_id, a task in a project takes the "
+                "project's area. "
                 "status: inbox | active | pending | someday | complete."
             ),
             inputSchema={
@@ -79,6 +90,7 @@ async def list_tools() -> list[types.Tool]:
                         "enum": ["inbox", "active", "pending", "someday", "complete"],
                     },
                     "project_id": {"type": "string"},
+                    "area_id": {"type": "string"},
                     "tag_ids": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["title"],
@@ -93,6 +105,7 @@ async def list_tools() -> list[types.Tool]:
                     "name": {"type": "string"},
                     "description": {"type": "string"},
                     "parent_id": {"type": "string"},
+                    "area_id": {"type": "string"},
                 },
                 "required": ["name"],
             },
@@ -116,6 +129,11 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             resp.raise_for_status()
             return [types.TextContent(type="text", text=_fmt(resp.json()))]
 
+        elif name == "list_areas":
+            resp = await client.get("/areas")
+            resp.raise_for_status()
+            return [types.TextContent(type="text", text=_fmt(resp.json()))]
+
         elif name == "list_projects":
             resp = await client.get("/projects", params={"root_only": "false"})
             resp.raise_for_status()
@@ -123,7 +141,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
         elif name == "create_task":
             payload = {"title": arguments["title"]}
-            for key in ("notes", "status", "project_id", "tag_ids"):
+            for key in ("notes", "status", "project_id", "area_id", "tag_ids"):
                 if val := arguments.get(key):
                     payload[key] = val
             resp = await client.post("/next-actions", json=payload)
@@ -132,7 +150,7 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
 
         elif name == "create_project":
             payload = {"name": arguments["name"]}
-            for key in ("description", "parent_id"):
+            for key in ("description", "parent_id", "area_id"):
                 if val := arguments.get(key):
                     payload[key] = val
             resp = await client.post("/projects", json=payload)

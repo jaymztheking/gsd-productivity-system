@@ -40,6 +40,9 @@ class NextAction(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
     )
+    area_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now()
     )

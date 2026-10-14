@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import AreaBadge from "../components/AreaBadge";
+import AreaManager from "../components/AreaManager";
+import { useAreas } from "../hooks/useAreas";
 import { useProjects } from "../hooks/useProjects";
-import type { Project } from "../types/models";
+import type { Area, Project } from "../types/models";
 
 export default function ProjectsPage() {
-  const { projects, loading, createProject } = useProjects();
+  const { projects, loading, createProject, refetch } = useProjects();
+  const { areas, createArea, renameArea, deleteArea, moveArea } = useAreas();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -71,6 +75,18 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      <AreaManager
+        areas={areas}
+        onCreate={createArea}
+        onRename={renameArea}
+        onDelete={async (id) => {
+          await deleteArea(id);
+          // Its projects are now unassigned
+          refetch();
+        }}
+        onMove={moveArea}
+      />
+
       {active.length === 0 && !showCreate && (
         <div className="empty-state">
           <div className="empty-state__title">No active projects</div>
@@ -82,6 +98,7 @@ export default function ProjectsPage() {
         <ProjectListItem
           key={project.id}
           project={project}
+          areas={areas}
           onClick={() => navigate(`/projects/${project.id}`)}
         />
       ))}
@@ -99,6 +116,7 @@ export default function ProjectsPage() {
               <ProjectListItem
                 key={project.id}
                 project={project}
+                areas={areas}
                 onClick={() => navigate(`/projects/${project.id}`)}
               />
             ))}
@@ -110,11 +128,14 @@ export default function ProjectsPage() {
 
 function ProjectListItem({
   project,
+  areas,
   onClick,
 }: {
   project: Project;
+  areas: Area[];
   onClick: () => void;
 }) {
+  const area = areas.find((a) => a.id === project.area_id);
   return (
     <button className="card project-list-item" onClick={onClick}>
       <div className="project-list-item__name">{project.name}</div>
@@ -127,6 +148,7 @@ function ProjectListItem({
         >
           {project.status}
         </span>
+        {area && <AreaBadge name={area.name} />}
       </div>
     </button>
   );

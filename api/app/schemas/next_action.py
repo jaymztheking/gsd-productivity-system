@@ -13,6 +13,8 @@ class NextActionCreate(BaseModel):
     notes: str | None = None
     status: ActionStatus = ActionStatus.inbox
     project_id: UUID | None = None
+    # Left out, a task in a project takes the project's area
+    area_id: UUID | None = None
     tag_ids: list[UUID] = []
 
 
@@ -21,6 +23,8 @@ class NextActionUpdate(BaseModel):
     notes: str | None = None
     status: ActionStatus | None = None
     project_id: UUID | None = None
+    # Sent as null, clears the area; left out, leaves it alone
+    area_id: UUID | None = None
     tag_ids: list[UUID] | None = None
 
 
@@ -30,6 +34,7 @@ class NextActionOut(BaseModel):
     notes: str | None
     status: ActionStatus
     project_id: UUID | None
+    area_id: UUID | None
     tags: list[TagOut]
     project: ProjectOut | None
     created_at: datetime

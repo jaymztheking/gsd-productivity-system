@@ -14,6 +14,14 @@ export interface Tag {
   sort_order: number;
 }
 
+export interface Area {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ProjectLink {
   id: string;
   project_id: string;
@@ -29,6 +37,7 @@ export interface Project {
   status: ProjectStatus;
   description: string | null;
   parent_id: string | null;
+  area_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +53,7 @@ export interface NextAction {
   notes: string | null;
   status: ActionStatus;
   project_id: string | null;
+  area_id: string | null;
   tags: Tag[];
   project: Project | null;
   created_at: string;

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAreas } from "../hooks/useAreas";
 import { useProjectDetail } from "../hooks/useProjectDetail";
 import { createProject } from "../api/client";
+import AreaSelector from "../components/AreaSelector";
 import LinkEditor from "../components/LinkEditor";
 import ProjectTaskList from "../components/ProjectTaskList";
 import type { ProjectStatus } from "../types/models";
@@ -22,6 +24,7 @@ export default function ProjectDetailPage() {
     moveTask,
     refetch,
   } = useProjectDetail(id!);
+  const { areas } = useAreas();
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -137,6 +140,20 @@ export default function ProjectDetailPage() {
             : "↩ Reactivate"}
         </button>
       </div>
+
+      {/* Area */}
+      {areas.length > 0 && (
+        <div className="project-section">
+          <AreaSelector
+            areas={areas}
+            selected={project.area_id}
+            onSelect={(areaId) => updateProject({ area_id: areaId })}
+          />
+          <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+            New tasks in this project start in its area.
+          </div>
+        </div>
+      )}
 
       {/* Description */}
       <div className="project-section">

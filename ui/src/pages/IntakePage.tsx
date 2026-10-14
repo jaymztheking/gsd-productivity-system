@@ -5,6 +5,7 @@ import {
   deleteNextAction,
 } from "../api/client";
 import { useNextActions } from "../hooks/useNextActions";
+import { useAreas } from "../hooks/useAreas";
 import { useProjects } from "../hooks/useProjects";
 import { useTags } from "../hooks/useTags";
 import type { Project } from "../types/models";
@@ -16,6 +17,7 @@ export default function IntakePage() {
   });
   const { tagsByCategory } = useTags();
   const { projects, createProject } = useProjects();
+  const { areas } = useAreas();
 
   const [captureText, setCaptureText] = useState("");
   const [capturing, setCapturing] = useState(false);
@@ -52,6 +54,7 @@ export default function IntakePage() {
       notes: string | null;
       tag_ids: string[];
       project_id: string | null;
+      area_id: string | null;
     }
   ) => {
     await updateNextAction(id, {
@@ -116,6 +119,7 @@ export default function IntakePage() {
             action={actions[0]}
             tagsByCategory={tagsByCategory}
             projects={projects}
+            areas={areas}
             onIgnore={handleIgnore}
             onSomeday={handleSomeday}
             onMakeTask={handleMakeTask}

@@ -85,6 +85,16 @@ Someday/Maybe was originally modelled as active next actions tagged `#someday`, 
 
 Migration 007 moved open items tagged `#someday` to the new status and deleted the tag. Its downgrade restores the tag and moves the items back to active, but Postgres cannot drop an enum value, so `someday` remains in the `action_status` type.
 
+## Areas of Focus Are Their Own Entity
+
+Areas (home life, professional development, ...) are GTD's areas of responsibility, a level above projects. They are a separate table rather than another tag category (TASK-016) because:
+
+- Context tags say *where* a task can be done (@home, @online), not which part of life it serves, so an area would compete with them for the same slot
+- Projects need an area too, and tags only attach to next actions
+- Areas have a user-set display order that drives the Engage column layout, and users create, rename and delete them; the tag taxonomy is seeded and fixed
+
+Each task and project has at most one area. A task added to a project without an explicit area takes the project's area, and an unassigned task moved into a project does too; an explicit `area_id` (including null) always wins. Deleting an area unassigns its tasks and projects rather than deleting them.
+
 ## Pending Status vs. `@waiting` Tag
 
 The spec uses `pending` status instead of a `@waiting` context tag:

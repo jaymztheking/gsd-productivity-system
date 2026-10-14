@@ -3,6 +3,7 @@ import {
   fetchNextActions,
   updateNextAction,
 } from "../api/client";
+import { useAreas } from "../hooks/useAreas";
 import { useProjects } from "../hooks/useProjects";
 import { useTags } from "../hooks/useTags";
 import type { NextAction, Project, TagCategory } from "../types/models";
@@ -12,6 +13,7 @@ import TaskCard from "./TaskCard";
 export default function EngagePage() {
   const { tagsByCategory, loading: tagsLoading } = useTags();
   const { projects, createProject } = useProjects();
+  const { areas } = useAreas();
 
   const [selectedTags, setSelectedTags] = useState<
     Record<TagCategory, string | null>
@@ -131,6 +133,7 @@ export default function EngagePage() {
               action={action}
               tagsByCategory={tagsByCategory}
               projects={projects}
+              areas={areas}
               onComplete={handleComplete}
               onUpdate={handleUpdate}
               onCreateProject={handleCreateProject}

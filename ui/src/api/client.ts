@@ -1,5 +1,6 @@
 import type {
   ActionStatus,
+  Area,
   NextAction,
   Project,
   ProjectDetail,
@@ -45,6 +46,37 @@ export function fetchTags(): Promise<Tag[]> {
   return request("/tags");
 }
 
+// --- Areas ---
+
+export function fetchAreas(): Promise<Area[]> {
+  return request("/areas");
+}
+
+export function createArea(name: string): Promise<Area> {
+  return request("/areas", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function updateArea(id: string, name: string): Promise<Area> {
+  return request(`/areas/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteArea(id: string): Promise<void> {
+  return request(`/areas/${id}`, { method: "DELETE" });
+}
+
+export function reorderAreas(orderedIds: string[]): Promise<void> {
+  return request("/areas/order", {
+    method: "PUT",
+    body: JSON.stringify({ ordered_ids: orderedIds }),
+  });
+}
+
 // --- Projects ---
 
 export function fetchProjects(rootOnly = true): Promise<Project[]> {
@@ -59,6 +91,7 @@ export function createProject(data: {
   name: string;
   description?: string | null;
   parent_id?: string | null;
+  area_id?: string | null;
 }): Promise<Project> {
   return request("/projects", {
     method: "POST",
@@ -73,6 +106,7 @@ export function updateProject(
     status?: ProjectStatus;
     description?: string | null;
     parent_id?: string | null;
+    area_id?: string | null;
   }
 ): Promise<Project> {
   return request(`/projects/${id}`, {
@@ -166,6 +200,7 @@ export function createNextAction(data: {
   notes?: string | null;
   status?: ActionStatus;
   project_id?: string | null;
+  area_id?: string | null;
   tag_ids?: string[];
 }): Promise<NextAction> {
   return request("/next-actions", {
@@ -181,6 +216,7 @@ export function updateNextAction(
     notes?: string | null;
     status?: ActionStatus;
     project_id?: string | null;
+    area_id?: string | null;
     tag_ids?: string[];
   }
 ): Promise<NextAction> {

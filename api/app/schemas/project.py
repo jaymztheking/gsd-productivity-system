@@ -12,6 +12,7 @@ class ProjectCreate(BaseModel):
     name: str
     description: str | None = None
     parent_id: UUID | None = None
+    area_id: UUID | None = None
 
 
 class ProjectUpdate(BaseModel):
@@ -19,6 +20,8 @@ class ProjectUpdate(BaseModel):
     status: ProjectStatus | None = None
     description: str | None = None
     parent_id: UUID | None = None
+    # Sent as null, clears the area; left out, leaves it alone
+    area_id: UUID | None = None
 
 
 class ProjectOut(BaseModel):
@@ -27,6 +30,7 @@ class ProjectOut(BaseModel):
     status: ProjectStatus
     description: str | None
     parent_id: UUID | None
+    area_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

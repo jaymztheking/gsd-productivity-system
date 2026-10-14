@@ -48,6 +48,7 @@ export function useProjectDetail(projectId: string) {
     name?: string;
     status?: ProjectStatus;
     description?: string | null;
+    area_id?: string | null;
   }) => {
     if (!project) return;
     const updated = await apiUpdateProject(project.id, data);

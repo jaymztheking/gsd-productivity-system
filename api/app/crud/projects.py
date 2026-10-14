@@ -5,6 +5,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.crud.areas import require_area
 from app.models.enums import ProjectStatus
 from app.models.next_action import NextAction
 from app.models.project import Project
@@ -59,10 +60,12 @@ async def create_project(
                 detail="Cannot nest deeper than 2 levels (project → sub-project)",
             )
 
+    await require_area(session, data.area_id)
     project = Project(
         name=data.name,
         description=data.description,
         parent_id=data.parent_id,
+        area_id=data.area_id,
     )
     session.add(project)
     await session.commit()
@@ -90,6 +93,9 @@ async def update_project(
                 detail="Cannot nest deeper than 2 levels",
             )
         project.parent_id = data.parent_id
+    if "area_id" in data.model_fields_set:
+        await require_area(session, data.area_id)
+        project.area_id = data.area_id
     await session.commit()
     await session.refresh(project)
     return project

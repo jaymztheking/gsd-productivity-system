@@ -475,6 +475,7 @@ Tags within time and energy categories are ordered by intensity (ordinal data). 
 
 - **next_actions** — the atomic unit. Status: inbox → active/pending → complete, or inbox → someday (Someday/Maybe, not yet committed; promoted to active from the Someday tab). Soft-deleted (preserves history).
 - **tags** — first-class entities with sort_order. Joined via `next_action_tags`. AND-filter logic.
+- **areas** — areas of focus (e.g. home life, professional development), a level above projects, in a user-set display order. A next action and a project each belong to at most one; a task added to a project defaults to the project's area. Deleting an area unassigns its tasks and projects. Managed under "Areas of focus" on the Projects page.
 - **projects** — container for related actions. Supports 2-level hierarchy (parent → sub-projects). Status: active → complete.
 - **project_links** — URL + label pairs attached to projects (JIRA-style references).
 - **routine_items** — standing daily-routine entries scheduled on chosen weekdays (bitmask). Never completed; soft-deleted.
