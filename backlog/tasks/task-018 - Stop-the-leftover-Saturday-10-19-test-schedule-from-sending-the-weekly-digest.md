@@ -1,11 +1,11 @@
 ---
 id: TASK-018
 title: 'Stop the leftover Saturday 10:19 test schedule from sending the weekly digest'
-status: In Progress
+status: Done
 assignee:
   - '@James'
 created_date: '2026-10-13 01:49'
-updated_date: '2026-10-13 02:20'
+updated_date: '2026-10-19 01:37'
 labels:
   - n8n
   - digest
@@ -28,9 +28,9 @@ The weekly review digest is now sent twice a week. James received one on Saturda
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 The source of the Saturday 10:19 sends is identified from n8n execution history and the live workflow and version state
-- [ ] #2 No schedule fires the digest outside Sunday 19:00 America/Denver
+- [x] #2 No schedule fires the digest outside Sunday 19:00 America/Denver
 - [x] #3 The fix survives an n8n pod restart, because a restart re-registers schedules from the published state
-- [ ] #4 A full week passes with exactly one digest delivered, on Sunday at 19:00 local
+- [x] #4 A full week passes with exactly one digest delivered, on Sunday at 19:00 local
 - [x] #5 If the cause is a publish or import quirk, the README digest publishing steps are updated so future schedule tests clean up after themselves
 <!-- AC:END -->
 
@@ -62,4 +62,16 @@ Fix applied 2026-10-12 ~20:20 MT:
 - Capture webhook OK after restart: POST to capture.medaughsolutions.com/webhook/capture without a token returns 403 (header-auth rejection; an unknown webhook path returns 404).
 - README: added a note under Weekly Digest configuration to restart n8n after changing a published schedule through the CLI, and to treat the image pin as the upgrade control.
 - Remaining: AC2 is confirmed when Sat Oct 17 10:19 MT passes with no execution, and AC4 when Sun Oct 18 19:00 MT produces exactly one. Re-run the read-only execution_entity query for wayvHwteu1n9IPRk after that.
+
+Validation 2026-10-18 (Gmail inbox, accepted by James in place of the execution_entity query):
+- Digests received: Sat Oct 10 10:19 MT (test cron, pre-fix), Sun Oct 11 19:00 MT, then none on Sat Oct 17 10:19 MT, and exactly one on Sun Oct 18 19:00 MT (Gmail 2026-10-19T01:00:19Z).
+- AC2/AC4 rest on delivered email only; a Saturday run that fired but failed to send would not appear. The DB query was not run.
+- n8n rolled twice more after the fix (deployment revisions 4 and 5; current pod started 2026-10-14T02:11Z, likely the TASK-020 password rotation). Image is still pinned to 2.38.7@sha256:a8c95f75, and the Oct 18 digest still sent correctly after those restarts, supporting AC3.
+- Noticed: the digest subject uses the UTC date (Sunday 19:00 MT send is titled Monday, October 19). Not in scope here.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+The Saturday 10:19 digests came from an orphaned in-memory cron left over from the Sep 26 schedule test (n8n Schedule Triggers are in-process crons; the CLI re-import changed only the DB). Fixed by pinning the live n8n deployment to n8nio/n8n:2.38.7@sha256:a8c95f75 and letting the rollout restart n8n, which re-registered only the published Sunday 19:00 America/Denver version. README now says to restart n8n after changing a published schedule through the CLI. Verified from the Gmail inbox: no digest on Sat Oct 17 10:19 MT and exactly one on Sun Oct 18 19:00 MT, including after later n8n restarts.
+<!-- SECTION:FINAL_SUMMARY:END -->
