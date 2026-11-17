@@ -1,9 +1,11 @@
 ---
 id: TASK-023
 title: Cut down repeated Cloudflare Access logins on the GSD UI
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-11-17 15:52'
+updated_date: '2026-11-17 16:00'
 labels:
   - cloudflare
   - security
