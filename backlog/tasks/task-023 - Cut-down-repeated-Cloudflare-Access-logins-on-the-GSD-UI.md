@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-11-17 15:52'
-updated_date: '2026-11-17 16:02'
+updated_date: '2026-11-17 16:46'
 labels:
   - cloudflare
   - security
@@ -47,3 +47,9 @@ The user does steps 1-3 because the secrets and dashboards are theirs. The Googl
 4. Verify from outside: an unauthenticated request to the UI host still gets 302 to Access; capture.medaughsolutions.com/webhook/capture still reaches n8n (403 without a token rather than an Access redirect); user confirms a Google login on the phone and a Shortcut capture.
 5. Document the login methods, session lengths, policy and reasoning in the README Remote Access section.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-17: Google login method added in Zero Trust. First Test returned "unable to find the requested identity provider", which is Cloudflare failing to find an IdP id that did not exist yet, not a Google error. Testing from the saved Login methods list passed and returned the user name and email. If this reappears: save first, then test from the list.
+<!-- SECTION:NOTES:END -->
