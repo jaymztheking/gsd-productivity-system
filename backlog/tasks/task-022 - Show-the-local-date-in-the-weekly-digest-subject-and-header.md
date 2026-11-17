@@ -1,9 +1,11 @@
 ---
 id: TASK-022
 title: Show the local date in the weekly digest subject and header
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-19 01:40'
+updated_date: '2026-11-17 17:03'
 labels:
   - n8n
   - digest
