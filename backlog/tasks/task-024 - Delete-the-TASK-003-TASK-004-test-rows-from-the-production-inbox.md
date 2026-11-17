@@ -1,9 +1,11 @@
 ---
 id: TASK-024
 title: Delete the TASK-003/TASK-004 test rows from the production inbox
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-11-17 15:52'
+updated_date: '2026-11-17 17:00'
 labels:
   - data
   - cleanup
