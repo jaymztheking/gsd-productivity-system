@@ -1,11 +1,11 @@
 ---
 id: TASK-024
 title: Delete the TASK-003/TASK-004 test rows from the production inbox
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-17 15:52'
-updated_date: '2026-11-17 17:00'
+updated_date: '2026-11-17 17:02'
 labels:
   - data
   - cleanup
@@ -24,9 +24,9 @@ Verifying the auth and tunnel work in TASK-003 and TASK-004 created two real nex
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Both rows are confirmed gone from the production database, either deleted by this task or found already absent
-- [ ] #2 Only those two rows are removed: matching is by id prefix and title together, and no other next action is affected
-- [ ] #3 The task notes record whether each row was deleted or already absent
+- [x] #1 Both rows are confirmed gone from the production database, either deleted by this task or found already absent
+- [x] #2 Only those two rows are removed: matching is by id prefix and title together, and no other next action is affected
+- [x] #3 The task notes record whether each row was deleted or already absent
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -39,4 +39,12 @@ Verifying the auth and tunnel work in TASK-003 and TASK-004 created two real nex
 - Both were deleted during TASK-004 itself, a few minutes before its final sweep, so the note there saying they were left behind was already out of date. Neither has rows in next_action_tags.
 - The "Task 23 test" capture the user deleted today (f2fdf3ad) is soft-deleted the same way.
 - Outside scope: "Test CarPlay capture" (a2c82dd0, from TASK-005) is not deleted; it has status complete.
+
+Decision (user, 2026-11-17): soft-deleted counts as gone. Both rows are hidden from the inbox, Engage and digest by the same deleted_at mechanism as every other delete, and hard-deleting only these two would be a one-off exception to how the app removes data. No rows were changed by this task.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Both TASK-003/TASK-004 test rows were already deleted, so nothing needed changing. Read-only queries on the production database showed c91e49c6 "e2e-test" and 20da46c0 "public capture test" were soft-deleted on 2026-09-26 at 06:07:41 and 06:07:44 UTC, during TASK-004 itself and a few minutes before its final sweep, so the TASK-004 note that they were left behind was already stale. GSD deletes by setting deleted_at, and every read path filters on it, so both rows are out of the inbox, Engage and the digest; neither had tag links. The user decided soft-deleted counts as gone rather than hard-deleting two rows as an exception. No data was modified. Not in scope and left as is: "Test CarPlay capture" (a2c82dd0, from TASK-005) is a completed, undeleted next action.
+<!-- SECTION:FINAL_SUMMARY:END -->
