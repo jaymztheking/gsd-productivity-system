@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-19 01:40'
-updated_date: '2026-11-17 17:04'
+updated_date: '2026-11-17 17:08'
 labels:
   - n8n
   - digest
@@ -13,6 +13,8 @@ dependencies: []
 references:
   - n8n/workflows/weekly-digest.json
   - README.md
+modified_files:
+  - n8n/workflows/weekly-digest.json
 priority: low
 type: bug
 ordinal: 17000
@@ -26,10 +28,10 @@ The weekly review digest is sent Sunday at 19:00 America/Denver, but its subject
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The digest subject and header show the America/Denver calendar date of the send, so a Sunday 19:00 MT send reads Sunday
-- [ ] #2 The date stays correct for a send in the evening after the UTC date has already rolled over, and across the DST change
-- [ ] #3 The live n8n workflow is updated and published, and still fires only on Sunday at 19:00 America/Denver
-- [ ] #4 The repo copy of the workflow matches the published live version
+- [x] #1 The digest subject and header show the America/Denver calendar date of the send, so a Sunday 19:00 MT send reads Sunday
+- [x] #2 The date stays correct for a send in the evening after the UTC date has already rolled over, and across the DST change
+- [x] #3 The live n8n workflow is updated and published, and still fires only on Sunday at 19:00 America/Denver
+- [x] #4 The repo copy of the workflow matches the published live version
 - [ ] #5 The next scheduled digest arrives with the correct local date in its subject
 <!-- AC:END -->
 
@@ -47,4 +49,11 @@ The weekly review digest is sent Sunday at 19:00 America/Denver, but its subject
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-11-17 research: live wayvHwteu1n9IPRk (published versionId e799fb61) matches n8n/workflows/weekly-digest.json node for node, ignoring ids, positions and credentials. Live credentials: GSD API Token oYF4SIR6WgX2VZQd on the five fetch nodes, SMTP account ygBtEFn5e291oEMk on Send Digest Email. In the n8n pod: ICU 78.3, process time zone UTC, and the Oct 18 send instant 2026-10-19T01:00:19Z formats as "Sunday, October 18, 2026" with timeZone America/Denver.
+
+2026-11-17 implementation:
+- Compile Digest now formats dateStr with timeZone: 'America/Denver'. dateStr feeds both the subject and the header.
+- Ran the patched Compile Digest code in the n8n pod (UTC clock) with Date fixed to four send instants; all render Sunday in subject and header: 2026-10-19T01:00:19Z -> Sunday, October 18, 2026 (MDT); 2026-11-02T02:00Z -> Sunday, November 1, 2026 (day DST ends); 2026-11-23T02:00Z -> Sunday, November 22, 2026 (MST); 2027-03-15T01:00Z -> Sunday, March 14, 2027 (day DST starts).
+- Deployed: took the live export, swapped in the new jsCode only, imported over wayvHwteu1n9IPRk (same id and credential ids), publish:workflow, then rollout restart deploy/n8n.
+- After restart: list:workflow --active=true shows only GSD Inbox Capture and GSD Weekly Review Digest. Published version 0adc5397 has the Sunday 19:00 weeks trigger, workflow timezone America/Denver, the new date code, all credentials attached, and matches the repo copy node for node (ignoring ids, positions, credentials). Capture webhook without a token returns 403.
+- AC #5 waits on the Sun 2026-11-22 19:00 MT digest.
 <!-- SECTION:NOTES:END -->
