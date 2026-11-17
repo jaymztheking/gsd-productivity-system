@@ -16,7 +16,7 @@
 # Add a DNS A record in Pi-hole:
 #   gsd.home.lab -> 192.168.50.240  (Traefik MetalLB IP)
 #
-# n8n is shared — use the existing instance at n8n.home.lab
+# n8n is not routed here. It has its own ingress at n8n.home.lab in k8s/n8n/.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
