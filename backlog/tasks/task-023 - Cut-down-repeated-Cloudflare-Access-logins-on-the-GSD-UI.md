@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-11-17 15:52'
-updated_date: '2026-11-17 16:51'
+updated_date: '2026-11-17 16:56'
 labels:
   - cloudflare
   - security
@@ -15,6 +15,8 @@ dependencies:
 references:
   - README.md
   - k8s/cloudflared/configmap.yaml
+modified_files:
+  - README.md
 priority: medium
 type: chore
 ordinal: 18000
@@ -29,9 +31,9 @@ TASK-004 put gsd.medaughsolutions.com behind Cloudflare Access, using the Cloudf
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 After a successful login, the GSD UI on a phone stays signed in for the chosen session length without another Access prompt
-- [ ] #2 Access still restricts the UI to the intended account(s), and a logged-out or unauthorised visitor is still stopped at the Cloudflare edge
-- [ ] #3 capture.medaughsolutions.com/webhook/capture is still not behind Access and a Shortcut capture still succeeds
-- [ ] #4 The README Remote Access section records the identity provider, session duration and policy now applied to gsd.medaughsolutions.com, and why
+- [x] #2 Access still restricts the UI to the intended account(s), and a logged-out or unauthorised visitor is still stopped at the Cloudflare edge
+- [x] #3 capture.medaughsolutions.com/webhook/capture is still not behind Access and a Shortcut capture still succeeds
+- [x] #4 The README Remote Access section records the identity provider, session duration and policy now applied to gsd.medaughsolutions.com, and why
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -58,4 +60,8 @@ The user does steps 1-3 because the secrets and dashboards are theirs. The Googl
 External checks after the change: / and /api/next-actions on gsd.medaughsolutions.com both 302 to proud-wind-167f.cloudflareaccess.com; POST capture.medaughsolutions.com/webhook/capture with no token 403 (n8n header auth, no Access redirect); capture /rest/login 404.
 
 README: added "Access login and session length" under Remote Access.
+
+2026-11-17 user verification: a Shortcut capture after the change arrived in the inbox (user then deleted it), so the capture hostname is still outside Access. Signing in with a different Google account (medaughsolutions@gmail.com) was refused with "That account does not have access", so the policy restricts entry, not the login method.
+
+AC #1 not yet proven: the 1-month application and global sessions are set, but staying signed in for that long can only be observed over time.
 <!-- SECTION:NOTES:END -->
