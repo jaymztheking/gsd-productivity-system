@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-19 01:40'
-updated_date: '2026-11-17 17:03'
+updated_date: '2026-11-17 17:04'
 labels:
   - n8n
   - digest
@@ -32,3 +32,19 @@ The weekly review digest is sent Sunday at 19:00 America/Denver, but its subject
 - [ ] #4 The repo copy of the workflow matches the published live version
 - [ ] #5 The next scheduled digest arrives with the correct local date in its subject
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Compile Digest: pass timeZone: 'America/Denver' to toLocaleDateString so dateStr (used in subject and header) is the local calendar date. The n8n container clock is UTC and n8n 2.38.7 bundles full ICU (78.3), so Intl can do the conversion.
+2. Check the expression in the n8n pod for a Sunday 19:00 send on both sides of the DST change.
+3. Import the patched JSON over wayvHwteu1n9IPRk keeping its id and live credential ids (same route as TASK-014), publish with the CLI, restart n8n so the in-memory cron is rebuilt (TASK-018).
+4. Export the published version and confirm: Sunday 19:00 America/Denver trigger only, new date code present, nodes otherwise match the repo copy. Capture webhook still answers 403 without a token.
+5. AC5 is confirmed by the next scheduled digest (Sun 2026-11-22 19:00 MT).
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-17 research: live wayvHwteu1n9IPRk (published versionId e799fb61) matches n8n/workflows/weekly-digest.json node for node, ignoring ids, positions and credentials. Live credentials: GSD API Token oYF4SIR6WgX2VZQd on the five fetch nodes, SMTP account ygBtEFn5e291oEMk on Send Digest Email. In the n8n pod: ICU 78.3, process time zone UTC, and the Oct 18 send instant 2026-10-19T01:00:19Z formats as "Sunday, October 18, 2026" with timeZone America/Denver.
+<!-- SECTION:NOTES:END -->
