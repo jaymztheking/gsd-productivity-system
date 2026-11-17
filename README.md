@@ -203,6 +203,35 @@ transit. A Traefik ingress that routed `/api` straight to the API bypassed that
 injection and had to be deleted; a tunnel aimed at the API would reproduce the
 same failure.
 
+### Access login and session length
+
+Configured in the Cloudflare Zero Trust dashboard (team domain
+`proud-wind-167f.cloudflareaccess.com`), not in this repo, so it is recorded here.
+
+| Setting | Value |
+|---|---|
+| Access application | `gsd.medaughsolutions.com` only. `capture.medaughsolutions.com` has no Access application and must not get one. |
+| Login methods | Google (primary), One-time PIN (fallback if Google login breaks) |
+| Policy | Allow, Emails = `james.medaugh@gmail.com` |
+| Application session duration | 1 month |
+| Global session timeout | 1 month |
+
+The one-time PIN with Cloudflare's default session meant fetching an emailed
+code over and over, and a capture tool that keeps asking for a login is one you
+stop opening. Google is one tap on a phone already signed in to Google, and a
+one-month session means that tap happens rarely. The policy, not the login
+method, decides who gets in: a different Google account is still refused at the
+edge. To cut off a lost device early, revoke its session under Zero Trust →
+My Team → Users.
+
+Google login uses an OAuth client in Google Cloud Console, of type Web
+application, with redirect URI
+`https://proud-wind-167f.cloudflareaccess.com/cdn-cgi/access/callback`. If the
+client secret is rotated, paste the new one into Zero Trust → Settings →
+Authentication → Google. When testing a login method, save it first and test
+from the Login methods list. Testing an unsaved one fails with "unable to find
+the requested identity provider".
+
 ### A consequence worth understanding
 
 Because nginx attaches the API token in transit, **anything that can reach the UI
