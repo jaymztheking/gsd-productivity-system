@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-11-17 15:52'
-updated_date: '2026-11-17 16:46'
+updated_date: '2026-11-17 16:51'
 labels:
   - cloudflare
   - security
@@ -52,4 +52,10 @@ The user does steps 1-3 because the secrets and dashboards are theirs. The Googl
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-11-17: Google login method added in Zero Trust. First Test returned "unable to find the requested identity provider", which is Cloudflare failing to find an IdP id that did not exist yet, not a Google error. Testing from the saved Login methods list passed and returned the user name and email. If this reappears: save first, then test from the list.
+
+2026-11-17: User set Google + One-time PIN on the GSD Access app, policy Emails = james.medaugh@gmail.com, application session and global session timeout 1 month. Phone (Chrome on iOS, cellular not specified) now goes to Google account selection instead of the Cloudflare PIN page and lands in the GSD UI.
+
+External checks after the change: / and /api/next-actions on gsd.medaughsolutions.com both 302 to proud-wind-167f.cloudflareaccess.com; POST capture.medaughsolutions.com/webhook/capture with no token 403 (n8n header auth, no Access redirect); capture /rest/login 404.
+
+README: added "Access login and session length" under Remote Access.
 <!-- SECTION:NOTES:END -->
