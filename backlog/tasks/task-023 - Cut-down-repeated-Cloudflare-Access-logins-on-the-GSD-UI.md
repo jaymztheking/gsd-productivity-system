@@ -1,11 +1,11 @@
 ---
 id: TASK-023
 title: Cut down repeated Cloudflare Access logins on the GSD UI
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-17 15:52'
-updated_date: '2026-11-17 16:56'
+updated_date: '2026-11-17 16:59'
 labels:
   - cloudflare
   - security
@@ -65,3 +65,13 @@ README: added "Access login and session length" under Remote Access.
 
 AC #1 not yet proven: the 1-month application and global sessions are set, but staying signed in for that long can only be observed over time.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Replaced the one-time-PIN login with Google on the gsd.medaughsolutions.com Access application, keeping PIN as a fallback, and raised both the application session and the Zero Trust global session to 1 month. The user had reported "a lot of Cloudflare login pages"; the phone now goes to Google account selection and into the UI in one step. The settings live in the Cloudflare dashboard, so the README Remote Access section now records the login methods, policy (Emails = james.medaugh@gmail.com), session lengths, the Google OAuth redirect URI, and why.
+
+Verified: unauthenticated / and /api/next-actions on the UI host 302 to Access; a different Google account (medaughsolutions@gmail.com) is refused with "That account does not have access"; capture.medaughsolutions.com/webhook/capture still returns 403 from n8n without a token, with no Access redirect, and a real Shortcut capture arrived in the inbox; /rest/login on the capture host is still 404.
+
+AC #1 is left unchecked on purpose: the 1-month session is configured but can only be confirmed by going that long without a prompt. If Access prompts again sooner, check both session settings first.
+<!-- SECTION:FINAL_SUMMARY:END -->
